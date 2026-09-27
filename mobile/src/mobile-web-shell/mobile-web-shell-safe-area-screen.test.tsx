@@ -65,21 +65,7 @@ describe('a page that owns its safe area', () => {
         const read = readBridgeHostMessage(json)
         return read.ok && read.message.type === 'init' ? [read.message.safeAreaInsets ?? null] : []
       })
-    const keyboard = async (height: number) => {
-      await act(async () => {
-        const ios = dependencies.platform === 'ios'
-        const name =
-          height > 0
-            ? ios
-              ? 'keyboardWillShow'
-              : 'keyboardDidShow'
-            : ios
-              ? 'keyboardWillHide'
-              : 'keyboardDidHide'
-        dependencies.keyboardListeners.get(name)?.({ endCoordinates: { height } })
-      })
-    }
-    return { tree, root, initInsets, keyboard }
+    return { tree, root, initInsets }
   }
   const ownedPage = (sessionId: string) => {
     dependencies.pageOwnsSafeArea = true
@@ -89,48 +75,33 @@ describe('a page that owns its safe area', () => {
 
   it('draws the view edge-to-edge and hands the page the insets it now sits under', async () => {
     const page = await ownedPage('session-owned')
-    expect(page.root().props.style[1]).toEqual({ paddingTop: 0, paddingBottom: 0 })
+    expect(page.root().props.style[1]).toEqual({ paddingTop: 0 })
     expect(page.initInsets()).toEqual([WINDOW])
-  })
-
-  it('re-sends init with no bottom inset while the keyboard ends the view', async () => {
-    const page = await ownedPage('session-owned-keyboard')
-    await page.keyboard(336)
-    // The view ends at the keyboard's top, so nothing of it is under the gesture bar.
-    expect(page.root().props.style[1]).toEqual({ paddingTop: 0, paddingBottom: 336 })
-    await page.keyboard(0)
-    expect(page.root().props.style[1]).toEqual({ paddingTop: 0, paddingBottom: 0 })
-    expect(page.initInsets()).toEqual([WINDOW, { ...WINDOW, bottom: 0 }, WINDOW])
-  })
-
-  it('does the same on Android, where the IME strip is measured above the gesture bar', async () => {
-    dependencies.platform = 'android'
-    const page = await ownedPage('session-owned-android')
-    await page.keyboard(336)
-    expect(page.root().props.style[1]).toEqual({ paddingTop: 0, paddingBottom: 344 })
-    await page.keyboard(0)
-    expect(page.root().props.style[1]).toEqual({ paddingTop: 0, paddingBottom: 0 })
-    expect(page.initInsets()).toEqual([WINDOW, { ...WINDOW, bottom: 0 }, WINDOW])
   })
 
   it('gives the status bar strip to the update banner while it shows', async () => {
     dependencies.updateNotice = 'update-failed'
     const page = await ownedPage('session-owned-banner')
-    expect(page.root().props.style[1]).toEqual({ paddingTop: 44, paddingBottom: 0 })
+    expect(page.root().props.style[1]).toEqual({ paddingTop: 44 })
     expect(page.initInsets()).toEqual([{ ...WINDOW, top: 0 }])
     await act(async () => {
       byName(page.tree, 'Pressable')
         .find((node) => node.props.accessibilityLabel === 'Dismiss notice')
         ?.props.onPress()
     })
-    expect(page.root().props.style[1]).toEqual({ paddingTop: 0, paddingBottom: 0 })
+    expect(page.root().props.style[1]).toEqual({ paddingTop: 0 })
     expect(page.initInsets()).toEqual([{ ...WINDOW, top: 0 }, WINDOW])
   })
 
   it('sends no second init to an older page that takes route updates but not insets', async () => {
+    dependencies.updateNotice = 'update-failed'
     const page = await openPage('session-older', [BRIDGE_ROUTE_UPDATE_ACCEPT])
-    await page.keyboard(336)
-    await page.keyboard(0)
+    // Dismissing the banner moves the top inset, which this page does not read.
+    await act(async () => {
+      byName(page.tree, 'Pressable')
+        .find((node) => node.props.accessibilityLabel === 'Dismiss notice')
+        ?.props.onPress()
+    })
     expect(page.root().props.style[1]).toEqual({ paddingTop: 44, paddingBottom: 8 })
     expect(page.initInsets()).toHaveLength(1)
   })

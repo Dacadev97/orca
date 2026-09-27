@@ -57,9 +57,7 @@ export type ScreenDependencies = {
   backClaimed: boolean
   /** Whether the session says the page pads for the system bars itself. */
   pageOwnsSafeArea: boolean
-  /** Whether the session says the page reads the keyboard from `init`. */
-  pageReadsKeyboardInset: boolean
-  /** What `Platform.OS` answers, which picks the keyboard events and the IME strip. */
+  /** What `Platform.OS` answers, which picks the keyboard events. */
   platform: 'ios' | 'android'
   reportPageBackClaim: Mock
   /** Whether the mounted host would take a press, which is a page that declared it takes one. */
@@ -117,7 +115,6 @@ export function createScreenDependencies(): ScreenDependencies {
     setScreenOptions: vi.fn(),
     backClaimed: false,
     pageOwnsSafeArea: false,
-    pageReadsKeyboardInset: false,
     platform: 'ios',
     reportPageBackClaim: vi.fn(),
     sendBackDelivers: true,
@@ -158,7 +155,6 @@ export function resetScreenDependencies(dependencies: ScreenDependencies): void 
   dependencies.reportPageBackClaim.mockReset()
   dependencies.backClaimed = false
   dependencies.pageOwnsSafeArea = false
-  dependencies.pageReadsKeyboardInset = false
   dependencies.platform = 'ios'
   dependencies.sendBackDelivers = true
   dependencies.backSends = 0

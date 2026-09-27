@@ -673,7 +673,7 @@ describe('what one case mutates does not reach the next', () => {
     await act(async () => {
       dependencies.keyboardListeners.get('keyboardWillShow')?.({ endCoordinates: { height: 336 } })
     })
-    expect(root.props.style[1]).toEqual({ paddingTop: 44, paddingBottom: 336 })
+    expect(root.props.style[1]).toEqual({ paddingTop: 44, paddingBottom: 8 })
 
     await act(async () => {
       dependencies.keyboardListeners.get('keyboardWillHide')?.({ endCoordinates: { height: 0 } })
@@ -718,17 +718,17 @@ describe('the frame under a page that has not painted', () => {
     expect(tree.root.findAll((node) => node.props.testID === 'mobile-web-shell-cover')).toEqual([])
   })
 
-  it('covers the same box the view gets, which is what the keyboard strip shortens', async () => {
+  it('covers the same box the view gets, which the keyboard does not shorten', async () => {
     // Both are children of the padded root: the view is `flex: 1` and the cover is an absolute
-    // fill, so Yoga lays each of them out against the same content box. The keyboard takes its
-    // strip off that box, so it takes it off both, and the cover cannot leave a gap the view fills.
+    // fill, so Yoga lays each of them out against the same content box, and the cover cannot leave
+    // a gap the view fills. The keyboard covers that box rather than taking a strip off it.
     dependencies.pageFrame = 'unpainted'
     const tree = await renderScreen(readyState('session-keyboard-cover'))
     const root = tree.root.find((node) => node.props.testID === 'mobile-web-shell-ready')
     await act(async () => {
       dependencies.keyboardListeners.get('keyboardWillShow')?.({ endCoordinates: { height: 336 } })
     })
-    expect(root.props.style[1]).toEqual({ paddingTop: 44, paddingBottom: 336 })
+    expect(root.props.style[1]).toEqual({ paddingTop: 44, paddingBottom: 8 })
     const cover = tree.root.find((node) => node.props.testID === 'mobile-web-shell-cover')
     expect(cover.props.style[0]).toMatchObject({
       position: 'absolute',

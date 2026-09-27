@@ -3,8 +3,6 @@ import { createFakeBridgePortPair } from './bridge-port-pair-test-harness'
 import { readBridgeHostMessage } from './bridge-envelope'
 import { createBridgeInitFrame } from './bridge-init-frame'
 import { readShellSession } from './bridge-client-session'
-import { BRIDGE_KEYBOARD_INSET_ACCEPT } from './bridge-keyboard-inset'
-import { createPageReadyFrame } from './bridge-client-init-handshake'
 
 function initFrame(keyboardInset?: number) {
   return createBridgeInitFrame({
@@ -56,10 +54,6 @@ describe('keyboardInset on init', () => {
       const frame = { ...initFrame(), keyboardInset: bad }
       expect(readBridgeHostMessage(JSON.stringify(frame)).ok, String(bad)).toBe(false)
     }
-  })
-
-  it('is declared by this page build, so the shell overlays it rather than shortening it', () => {
-    expect(createPageReadyFrame().accepts).toContain(BRIDGE_KEYBOARD_INSET_ACCEPT)
   })
 })
 

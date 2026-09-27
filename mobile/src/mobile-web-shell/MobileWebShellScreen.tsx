@@ -33,8 +33,6 @@ import { useMobileWebShellSession } from './use-mobile-web-shell-session'
 import { usePageHostSnapshot } from './use-page-host-snapshot'
 import { SHELL_OPENING_LABEL, ShellPageCover, ShellWaitingFrame } from './ShellWaitingFrame'
 import { pageSafeAreaInsets, usePublishedSafeAreaInsets } from './page-safe-area-insets'
-import { shellKeyboardGeometry } from './page-keyboard-inset'
-import { hostOs } from '../platform/host-os'
 
 function failureMessage(reason: MobileWebShellFailureCause): string {
   switch (reason) {
@@ -191,8 +189,7 @@ export function MobileWebShellScreen({
     pageReady,
     pageFrame,
     backClaimed,
-    pageOwnsSafeArea,
-    pageReadsKeyboardInset
+    pageOwnsSafeArea
   } = useMobileWebShellSession({ hostId, routePathname: route.pathname, runtime })
   // Which mount the notice was dismissed on, not whether it was: a later refusal opens its own
   // generation under a new session id, so it is not silenced by a tap on the one before it.
@@ -200,19 +197,10 @@ export function MobileWebShellScreen({
   const noticeShown =
     updateNotice !== null && state.kind === 'ready' && noticeDismissedFor !== state.sessionId
   // The page cannot see the IME for itself: edge-to-edge makes `adjustResize` inert and the view's
-  // IME insets are zeroed, so `visualViewport` never shrinks. A page that reads the height from
-  // `init` is covered by the keyboard like a native screen; an older one gets a view ended above it.
-  const { keyboardInset, viewShortenedBy } = shellKeyboardGeometry({
-    keyboardHeight: useKeyboardOcclusion(),
-    bottomInset: insets.bottom,
-    platform: hostOs(),
-    pageReadsKeyboardInset
-  })
-  const pageInsets = pageSafeAreaInsets({
-    insets,
-    viewShortenedBy,
-    topCovered: noticeShown
-  })
+  // IME insets are zeroed, so `visualViewport` never shrinks. The keyboard covers the view like a
+  // native screen, and the page lifts by the height native screens read.
+  const keyboardInset = Math.max(0, useKeyboardOcclusion())
+  const pageInsets = pageSafeAreaInsets({ insets, topCovered: noticeShown })
   const { snapshot, unreadable, readStorage, refreshStorage, writeStorage } = usePageHostSnapshot(
     hostId,
     route.pathname
@@ -374,8 +362,8 @@ export function MobileWebShellScreen({
         // Edge-to-edge like a native screen, for a page that pads for the bars itself; an older page
         // keeps the strips. The banner takes the status bar strip when it shows.
         pageOwnsSafeArea
-          ? { paddingTop: noticeShown ? insets.top : 0, paddingBottom: viewShortenedBy }
-          : { paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, viewShortenedBy) }
+          ? { paddingTop: noticeShown ? insets.top : 0 }
+          : { paddingTop: insets.top, paddingBottom: insets.bottom }
       ]}
       testID="mobile-web-shell-ready"
     >

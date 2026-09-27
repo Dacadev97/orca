@@ -7,9 +7,3 @@ import { BRIDGE_MAX_SAFE_AREA_INSET } from './bridge-safe-area-insets'
  * overlays the IME on the view like a native screen, and the page cannot measure it.
  */
 export const BridgeKeyboardInsetSchema = z.number().finite().min(0).max(BRIDGE_MAX_SAFE_AREA_INSET)
-
-/**
- * What a page puts in `ready.accepts` to say it reads the keyboard from `init`. The shell overlays
- * the keyboard only on such a page; an older one cannot see it, so the shell shortens its view.
- */
-export const BRIDGE_KEYBOARD_INSET_ACCEPT = 'keyboard-inset'

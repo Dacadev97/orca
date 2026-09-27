@@ -31,7 +31,6 @@ import {
   renderScreen as mountScreen
 } from './mobile-web-shell-screen-test-harness'
 import { readBridgeHostMessage } from './bridge/bridge-envelope'
-import { BRIDGE_KEYBOARD_INSET_ACCEPT } from './bridge/bridge-keyboard-inset'
 import { BRIDGE_ROUTE_UPDATE_ACCEPT } from './bridge/bridge-route-update'
 import { BRIDGE_SAFE_AREA_ACCEPT } from './bridge/bridge-safe-area-insets'
 import { MobileWebShellScreen } from './MobileWebShellScreen'
@@ -50,25 +49,20 @@ beforeEach(() => {
 const WINDOW = { top: 44, right: 0, bottom: 8, left: 0 }
 
 /**
- * A page that reads the keyboard from `init` is covered by it like a native screen: the view keeps
- * its size, and the page is told the height on every keyboard event.
+ * The page is covered by the keyboard like a native screen: the view keeps its size, and the page
+ * is told the height on every keyboard event.
  */
 describe('a page the keyboard covers', () => {
   async function openPage(sessionId: string) {
     dependencies.client = createFakeRpcClient()
     dependencies.pageOwnsSafeArea = true
-    dependencies.pageReadsKeyboardInset = true
     const tree = await renderScreen(readyState(sessionId))
     await act(async () => {
       byName(tree, 'ShellViewProbe')[0]?.props.onBridgeMessage({
         nativeEvent: {
           json: clientFrame({
             type: 'ready',
-            accepts: [
-              BRIDGE_ROUTE_UPDATE_ACCEPT,
-              BRIDGE_SAFE_AREA_ACCEPT,
-              BRIDGE_KEYBOARD_INSET_ACCEPT
-            ]
+            accepts: [BRIDGE_ROUTE_UPDATE_ACCEPT, BRIDGE_SAFE_AREA_ACCEPT]
           })
         }
       })
@@ -106,7 +100,7 @@ describe('a page the keyboard covers', () => {
       // a keyboard that changes height while open leaves no gap above it.
       for (const height of [312, 346, 0]) {
         await page.keyboard(height)
-        expect(page.root().props.style[1]).toEqual({ paddingTop: 0, paddingBottom: 0 })
+        expect(page.root().props.style[1]).toEqual({ paddingTop: 0 })
       }
       // The keyboard's own height as native screens read it on this OS, home indicator included on
       // iOS; the page's arithmetic branches on the shell's OS, as native does. The bottom inset
@@ -119,38 +113,4 @@ describe('a page the keyboard covers', () => {
       ])
     })
   }
-
-  it('still shortens the view for an older page that cannot read the keyboard', async () => {
-    dependencies.platform = 'android'
-    dependencies.client = createFakeRpcClient()
-    dependencies.pageOwnsSafeArea = true
-    const tree = await renderScreen(readyState('session-older-keyboard'))
-    const ready = async () => {
-      await act(async () => {
-        byName(tree, 'ShellViewProbe')[0]?.props.onBridgeMessage({
-          nativeEvent: {
-            json: clientFrame({
-              type: 'ready',
-              accepts: [BRIDGE_ROUTE_UPDATE_ACCEPT, BRIDGE_SAFE_AREA_ACCEPT]
-            })
-          }
-        })
-      })
-    }
-    await ready()
-    await act(async () => {
-      dependencies.keyboardListeners.get('keyboardDidShow')?.({ endCoordinates: { height: 336 } })
-    })
-    const root = tree.root.find((node) => node.props.testID === 'mobile-web-shell-ready')
-    expect(root.props.style[1]).toEqual({ paddingTop: 0, paddingBottom: 344 })
-    // The page re-asks, as one does after a refused frame: the answer still carries no keyboard.
-    await ready()
-    const inits = dependencies.posted.flatMap((json) => {
-      const read = readBridgeHostMessage(json)
-      return read.ok && read.message.type === 'init' ? [read.message] : []
-    })
-    // The first `init`, the insets move and the re-ask; the keyboard itself sends nothing here.
-    expect(inits).toHaveLength(3)
-    expect(inits.filter((init) => 'keyboardInset' in init)).toEqual([])
-  })
 })

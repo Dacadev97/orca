@@ -112,8 +112,7 @@ bootstrapShellPage({
     // The same shape again, and for the same reason: every haptic on this page is played from a
     // plain function inside a row's press handler, which no provider wraps.
     publishHapticsNotifier((kind) => client.notifyHaptics(kind))
-    // The shell's keyboard height, read by plain functions as well as hooks; 0 from a shell too old
-    // to send one, which shortens the view instead.
+    // The shell's keyboard height, read by plain functions as well as hooks; 0 while it is closed.
     publishShellKeyboardSource({
       read: () => client.getShellSession()?.keyboardInset ?? 0,
       subscribe: client.onKeyboardInsetUpdate

@@ -139,16 +139,4 @@ describe('a fill-mode sheet on the page', () => {
       publishShellKeyboardSource(null)
     }
   })
-
-  it('does not lift over a keyboard an older shell shortened the WebView for', () => {
-    setWindowHeight(RESTING_HEIGHT)
-    const renderer = renderFillSheet()
-    act(() => setWindowHeight(RESTING_HEIGHT - IME_HEIGHT))
-    // The shortened window is the whole avoidance: the sheet's height follows it and nothing lifts.
-    expect(sheetStyle(renderer)).toMatchObject({
-      marginBottom: 0,
-      height: RESTING_HEIGHT - IME_HEIGHT - 24 - 16
-    })
-    act(() => renderer.unmount())
-  })
 })

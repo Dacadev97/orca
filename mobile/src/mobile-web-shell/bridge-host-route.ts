@@ -10,7 +10,6 @@ import {
   ZERO_SAFE_AREA_INSETS,
   type BridgeSafeAreaInsets
 } from './bridge/bridge-safe-area-insets'
-import { BRIDGE_KEYBOARD_INSET_ACCEPT } from './bridge/bridge-keyboard-inset'
 
 /** The screen one host is serving, which is the one field of `init` that moves under a live page. */
 export type BridgeHostRoute = {
@@ -41,9 +40,9 @@ export type BridgeHostRoute = {
    * lane as a pane update: held either way, so the next `ready` carries them.
    */
   readonly publishSafeAreaInsets: (next: BridgeSafeAreaInsets, deliverable: boolean) => void
-  /** The keyboard height the next `init` carries; 0 to a page that did not declare it reads one. */
+  /** The keyboard height the next `init` carries. */
   readonly keyboardInset: () => number
-  /** Moves the held keyboard height on the same lane as the insets, to a page that reads it. */
+  /** Moves the held keyboard height on the same lane as the insets. */
   readonly publishKeyboardInset: (next: number, deliverable: boolean) => void
 }
 
@@ -105,13 +104,13 @@ export function createBridgeHostRoute(args: {
         args.sendInit()
       }
     },
-    keyboardInset: () => (accepts.includes(BRIDGE_KEYBOARD_INSET_ACCEPT) ? keyboard : 0),
+    keyboardInset: () => keyboard,
     publishKeyboardInset: (next, deliverable) => {
       if (keyboard === next) {
         return
       }
       keyboard = next
-      if (deliverable && accepts.includes(BRIDGE_KEYBOARD_INSET_ACCEPT)) {
+      if (deliverable) {
         args.sendInit()
       }
     }

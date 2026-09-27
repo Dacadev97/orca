@@ -5,11 +5,10 @@
  */
 import { readFileSync } from 'node:fs'
 import { relative } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { censusSourceFiles } from '../test-support/census-source-files'
 
-const SHELL_DIR = fileURLToPath(new URL('./', import.meta.url))
+const SHELL_DIR = import.meta.dirname
 const RETIRED =
   /softwareKeyboardWindowInset|viewShortenedBy|pageReadsKeyboardInset|shellPageReadsKeyboardInset|shellKeyboardGeometry|BRIDGE_KEYBOARD_INSET_ACCEPT|'keyboard-inset'/
 const KEYBOARD_SIZES_VIEW = /\b(padding|margin)?(Bottom|bottom|height|Height)\s*:[^,}\n]*keyboard/i

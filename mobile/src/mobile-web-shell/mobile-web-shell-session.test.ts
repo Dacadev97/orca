@@ -221,6 +221,25 @@ describe('the connected flow', () => {
     })
   })
 
+  it('walls a listed route whose page is older than this shell, as a desktop to update', () => {
+    for (const manifest of [
+      { ...MANIFEST, pageVersion: 0 },
+      { ...MANIFEST, pageVersion: undefined }
+    ]) {
+      const step = run(afterCacheRead(null).session, { type: 'manifest-read', manifest })
+      expect(step.session.state).toEqual({
+        kind: 'wall',
+        verdict: {
+          kind: 'blocked',
+          reason: 'bundle-incompatible',
+          side: 'desktop',
+          pageVersion: 0,
+          requiredPageVersion: 1
+        }
+      })
+    }
+  })
+
   it('tells the page which routes it may keep, so it hands the rest back', () => {
     const step = run(afterCacheRead(null).session, { type: 'manifest-read', manifest: MANIFEST })
     expect(step.session.pageRoutes).toEqual(['/h/[hostId]'])

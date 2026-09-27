@@ -41,6 +41,7 @@ const doubles = vi.hoisted((): Doubles => {
     buildId: 'b'.repeat(64),
     minCompatibleRuntimeProtocolVersion: 2,
     runtimeProtocolVersion: 5,
+    pageVersion: 1,
     entrypoint: 'index.html',
     totalBytes: 2048,
     assets: [

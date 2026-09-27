@@ -115,7 +115,8 @@ const HEAD_CALLBACK_IDENTITY_SHA256 =
 // the other's body. The hook and string counts are C7.2's and stand.
 // Refreshed once more for the two dictation failure handlers, which now both call
 // `reportDictationFailure` instead of each choosing between the setup sheet and a toast.
-const HEAD_CALLBACK_BODY_SHA256 = '0c8e8d5aacf1ca3e6cfa9d992f9e6cba32f3c870c8b1b12be277aa5fba5ce940'
+// Refreshed when `applySessionTabs` began recording a landed launch's tab on the host.
+const HEAD_CALLBACK_BODY_SHA256 = 'dbd13ded42e6cd35bebda21950ddc8435b2790041b8ce449acd46dea881a3b76'
 // Refreshed for the startup effect: both `worktree.activate` sends became `worktreeActivate`, and
 // the sleeping-agent check reads that operation's verdict instead of the reply envelope. Refreshed
 // again when the reporter took the reply and interpreted it itself, retiring the hand-built
@@ -173,15 +174,17 @@ const HEAD_TIMER_CLEANUP_SHA256 = 'c73f1d1c2cc89642f3d727d6f3b6b81860a9d6f342345
 // 529 -> 530, and the host-JSX hash: `key="terminal-frame"`, so the page's frame mounts with its
 // onLayout rather than reusing the loading View. Native measured 47 rows before and after: its
 // frame reported either way, and its window is its frame, so both measure paths agree there.
+// +4 for the same activation's params.
 const HEAD_RUNTIME_STRING_SHA256 =
-  '36fd00273e872f46c1b641cee3f1bfc2afa7083b0c4f6b3aaa9c20bb887a20bc'
+  '61af32a9d79c98edc543b3944d65edee2d4ba361589e03ae0777978790d66ee6'
 // Moved by both of the dock's fields: their refs, and the live one's submit handler, are the seam's now.
 const HEAD_HOST_JSX_SHA256 = 'ca4c8b46af86a05cb671de91c22111c9e4aaeefd4a04c7b8b09976ca01a31c9b'
 const HEAD_LEAF_JSX_SHA256 = 'c7e1a4b90197697f1eaa640c38da63281b4f7b84fb036ae2152f00c2f7d7cb77'
 const HEAD_STYLE_REFERENCE_SHA256 =
   '295a3501c2c6d7bea7c8bbf38b3f3534f01344cd7e1b91bb8e07c040821d596a'
+// +1 for that activation's identity payload.
 const HEAD_IDENTITY_FIELD_SHA256 =
-  '91146853930a34dd1f3d80e5c97fbacd7cf19fb93dd26fe8fc6f29169622f9d6'
+  '3996f701eceb723be18c2001e9ee770498bfd5b2ddcacae510c380eb0adae80a'
 const HEAD_NAVIGATION_SHA256 = '9d96f5dad7de555d6553eac39c0fab00efad507470fd562cb9beaa32db16f512'
 const HEAD_CAPABILITY_SHA256 = '67c3154b71b542bb63a4365d3ea75aef19ef133c02f509318619618221786fab'
 
@@ -603,7 +606,7 @@ describe('mobile session route extraction parity', () => {
     )
     expect(hash(native.cleanups)).toBe(HEAD_TIMER_CLEANUP_SHA256)
     const compatibility = readCompatibilityFacts(definitions)
-    expect(compatibility.identityFields).toHaveLength(14)
+    expect(compatibility.identityFields).toHaveLength(15)
     expect(hash(compatibility.identityFields)).toBe(HEAD_IDENTITY_FIELD_SHA256)
     expect(compatibility.navigation).toHaveLength(6)
     expect(hash(compatibility.navigation)).toBe(HEAD_NAVIGATION_SHA256)
@@ -613,7 +616,7 @@ describe('mobile session route extraction parity', () => {
 
   it('preserves runtime strings, styles, and the expanded JSX tree', () => {
     const strings = readRuntimeStrings()
-    expect(strings).toHaveLength(545)
+    expect(strings).toHaveLength(549)
     expect(hash(strings)).toBe(HEAD_RUNTIME_STRING_SHA256)
     const jsx = readJsxFacts(readDefinitions())
     expect(jsx.host).toHaveLength(124)

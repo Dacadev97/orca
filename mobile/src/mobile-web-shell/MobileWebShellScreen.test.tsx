@@ -39,7 +39,7 @@ import {
   textOf,
   updateScreen as reRenderScreen
 } from './mobile-web-shell-screen-test-harness'
-import { BRIDGE_BACK_CLAIM_NOTIFY, BRIDGE_BACK_FRAME } from './bridge/bridge-page-back'
+import { BRIDGE_BACK_CLAIM_NOTIFY } from './bridge/bridge-page-back'
 import { BRIDGE_PAGE_PAINTED } from './bridge/bridge-page-painted'
 import {
   BRIDGE_FAULT_GRANT,

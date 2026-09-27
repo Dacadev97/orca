@@ -291,10 +291,12 @@ function fireSurfaceTouch(type: string, surface: HTMLElement, xs: number[]) {
 }
 
 /** Two fingers 20px apart, spread to `spread`px, a parsed write mid-gesture, then both lift. */
-function pinchTo(doc: ReturnType<typeof startMeasuredDocument>, spread: number) {
+function pinchTo(doc: ReturnType<typeof startMeasuredDocument>, spread: number, write = true) {
   fireSurfaceTouch('touchstart', doc.surface, [10, 30])
   fireSurfaceTouch('touchmove', doc.surface, [10, 10 + spread])
-  doc.write()
+  if (write) {
+    doc.write()
+  }
   fireSurfaceTouch('touchend', doc.surface, [])
 }
 
@@ -328,6 +330,23 @@ describe('keyboard-avoidance metrics across a pinch', () => {
 
     expect(afterWrite).toBe(before + 1)
     expect(metricsOf(doc.posted).length).toBe(afterWrite + 1)
+    doc.started.stop()
+  })
+
+  it('never reports the pre-refit pitch when a release lands while a refit is pending', async () => {
+    const doc = startMeasuredDocument()
+    await settle()
+    const before = metricsOf(doc.posted).length
+
+    // The settings change sets the new font now and refits a frame later; the pinch releases
+    // onto that same preset in between.
+    doc.started.send({ type: 'set-font-scale', fontScale: 1.5 })
+    pinchTo(doc, 20, false)
+    await settle()
+
+    const reported = metricsOf(doc.posted).slice(before)
+    expect(reported.map((message) => message.rowPitch)).toEqual([reported.at(-1)?.rowPitch])
+    expect(reported.at(-1)?.rowPitch).toBeGreaterThan(20)
     doc.started.stop()
   })
 })

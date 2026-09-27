@@ -3,7 +3,6 @@ import { scheduleDocumentFrame } from './document-frame-registry'
 import { touchesInRoot } from './document-host-seams'
 import { clampPan, getCellHeight } from './fit-scale'
 import { notify } from './host-notify'
-import { emitKeyboardAvoidanceMetrics } from './keyboard-avoidance-metrics'
 import { attachSurfaceMouseClickDragHandler } from './mouse-click-drag'
 import { routeScrollLines, shouldRouteScrollToTerminalInput } from './mouse-input-encoding'
 import {
@@ -230,12 +229,8 @@ export function attachSurfaceEventHandlers(
         scope.userScale = 1
         scope.panX = 0
         scope.panY = 0
-        const refitting = applyTextScale(scope, target)
+        applyTextScale(scope, target)
         updateTransform(scope)
-        // Why: the pinch moved the drawn row pitch; a refit reports it, a same-size release does not.
-        if (!refitting) {
-          emitKeyboardAvoidanceMetrics(scope)
-        }
         notify(scope, { type: 'font-scale-changed', fontScale: target })
         if (changed) {
           notify(scope, { type: 'haptic', kind: 'selection' })

@@ -55,16 +55,17 @@ const TERMINAL_FONT_FALLBACKS =
 // the new cell metrics so the text shows at its true size immediately. RN's
 // refit (measure → updateViewport) then makes the server reflow the PTY to the
 // same column count so the shell rewraps. cell metrics update on the frame
-// after fontSize changes, so the resize/fit is deferred one rAF. Returns whether that refit (which
-// reports the keyboard-avoidance metrics) was scheduled.
+// after fontSize changes, so the resize/fit is deferred one rAF.
 export function applyTextScale(scope: TerminalDocumentScope, scale: number) {
   scope.currentTextScale = scale
   if (!scope.term) {
-    return false
+    return
   }
   const px = fontPxForScale(scale)
   if (scope.term.options.fontSize === px) {
-    return false
+    // Why: a pinch moved the drawn pitch; the fit commit is the one site that reports it.
+    applyFitScale(scope, 'text-scale')
+    return
   }
   scope.term.options.fontSize = px
   // Ruling 21: the generation this frame was scheduled under. `scope.term` alone is not enough —
@@ -88,7 +89,6 @@ export function applyTextScale(scope: TerminalDocumentScope, scale: number) {
     }
     applyFitScale(scope, 'text-scale')
   })
-  return true
 }
 
 export function startTextScaling(scope: TerminalDocumentScope) {

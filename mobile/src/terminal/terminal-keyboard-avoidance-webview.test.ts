@@ -211,13 +211,25 @@ describe('terminal keyboard-avoidance WebView metrics', () => {
       const start = source.indexOf(opener)
       expect(start, `${module} no longer carries ${opener}`).toBeGreaterThanOrEqual(0)
       const block = source.slice(start, source.indexOf('\n}', start))
-      const emitAt = block.indexOf(emit)
+      const emitAt = block.lastIndexOf(emit)
       const geometryAt = block.includes('.resize(')
         ? block.indexOf('.resize(')
         : block.indexOf('.reset(')
       expect(emitAt, `${module} does not emit metrics`).toBeGreaterThanOrEqual(0)
       expect(emitAt, `${module} emits before it resizes`).toBeGreaterThan(geometryAt)
     }
+  })
+
+  it('reports a text-scale change only through the fit it commits', () => {
+    // One emit site: a pinch release and a settings change both end in the fit commit, so the
+    // release carries no emit of its own and needs no word back on whether a refit is pending.
+    const textScaling = documentModuleSource('text-scaling')
+    const start = textScaling.indexOf('export function applyTextScale(')
+    const applyTextScale = textScaling.slice(start, textScaling.indexOf('\n}', start))
+    expect(applyTextScale).not.toMatch(/return (true|false)/)
+    expect(documentModuleSource('surface-touch-gestures')).not.toContain(
+      'emitKeyboardAvoidanceMetrics'
+    )
   })
 
   it('reports the row pitch as drawn, fit scale included, and none before a cell is measured', () => {

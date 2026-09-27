@@ -115,8 +115,9 @@ const HEAD_CALLBACK_IDENTITY_SHA256 =
 // the other's body. The hook and string counts are C7.2's and stand.
 // Refreshed once more for the two dictation failure handlers, which now both call
 // `reportDictationFailure` instead of each choosing between the setup sheet and a toast.
-// Refreshed when `applySessionTabs` began recording a landed launch's tab on the host.
-const HEAD_CALLBACK_BODY_SHA256 = 'dbd13ded42e6cd35bebda21950ddc8435b2790041b8ce449acd46dea881a3b76'
+// Refreshed when `applySessionTabs` began recording a landed launch's tab on the host, and when it
+// began freeing the "+" lock as that tab lands.
+const HEAD_CALLBACK_BODY_SHA256 = '1d933557b3b00a77c9409327a1f8b6e649ee27f031b2f6895f2e12f0db601571'
 // Refreshed for the startup effect: both `worktree.activate` sends became `worktreeActivate`, and
 // the sleeping-agent check reads that operation's verdict instead of the reply envelope. Refreshed
 // again when the reporter took the reply and interpreted it itself, retiring the hand-built
@@ -139,8 +140,10 @@ const HEAD_CONTENT_HOOK_SHA256 = '9c3b612fef3f370d66873aefdbe1d701f20cb64ded31fe
 // `reportCreateFailure`, which now always shows a toast. Refreshed when both launch paths read the
 // tab list at once and the older-host chat path stopped tearing down the open terminal early.
 // Refreshed when a launch's late reply stopped taking focus from a tab the user picked meanwhile.
+// Refreshed when the + menu's host launch moved to `new-tab-agent-host-launch.ts` and the phone began
+// naming the launched tab before asking, with the "+" lock held by the create's own id.
 const HEAD_NESTED_FUNCTION_SHA256 =
-  '4b451ed1a3838fda42f3c6cd9ecbee2d170552a1feac74c28a8389fb0e89404c'
+  '7782e4f0ab79dff73bfcd8b2ce064d0e074047e79b5c623f1879abb5bd181373'
 // -1 registration and -1 removal: the Markdown actions' `BackHandler` pair is `useBackClaim`'s.
 const HEAD_NATIVE_REGISTRATION_SHA256 =
   '87d4599f475575131d4d5daa20f0dac579ca6c829353cbb654206ea6965dadae'
@@ -177,8 +180,11 @@ const HEAD_TIMER_CLEANUP_SHA256 = 'c73f1d1c2cc89642f3d727d6f3b6b81860a9d6f342345
 // onLayout rather than reusing the loading View. Native measured 47 rows before and after: its
 // frame reported either way, and its window is its frame, so both measure paths agree there.
 // +4 for the same activation's params; -1 for the older-host chat path's early `'agent-session'`.
+// 548 -> 540: -9 as the + menu's host launch left for `new-tab-agent-host-launch.ts` (the notes
+// toasts, both launch sources, `'submit'`, four outcome kinds); +1 `'launched'` for the landing
+// that frees the "+" lock.
 const HEAD_RUNTIME_STRING_SHA256 =
-  '23f1998ab382fcb6ed0d6020abd7f7a1aa82494b35186f8d236ef7604842d7b9'
+  'b0af3c70d206e337bda90db908fc9cc769eb2cc39f628906c7d42e9c73d4b4af'
 // Moved by both of the dock's fields: their refs, and the live one's submit handler, are the seam's now.
 const HEAD_HOST_JSX_SHA256 = 'ca4c8b46af86a05cb671de91c22111c9e4aaeefd4a04c7b8b09976ca01a31c9b'
 const HEAD_LEAF_JSX_SHA256 = 'c7e1a4b90197697f1eaa640c38da63281b4f7b84fb036ae2152f00c2f7d7cb77'
@@ -618,7 +624,7 @@ describe('mobile session route extraction parity', () => {
 
   it('preserves runtime strings, styles, and the expanded JSX tree', () => {
     const strings = readRuntimeStrings()
-    expect(strings).toHaveLength(548)
+    expect(strings).toHaveLength(540)
     expect(hash(strings)).toBe(HEAD_RUNTIME_STRING_SHA256)
     const jsx = readJsxFacts(readDefinitions())
     expect(jsx.host).toHaveLength(124)

@@ -136,9 +136,10 @@ const HEAD_CONTENT_HOOK_SHA256 = '9c3b612fef3f370d66873aefdbe1d701f20cb64ded31fe
 // branch became that operation's own throw-the-host-message acceptance. Refreshed for negotiated
 // optimistic placement, which defers to legacy host snapshots when ownership paths disagree.
 // Refreshed for the + menu's agent.launch path and one pending selection, and for
-// `reportCreateFailure`, which now always shows a toast.
+// `reportCreateFailure`, which now always shows a toast. Refreshed when both launch paths read the
+// tab list at once and the older-host chat path stopped tearing down the open terminal early.
 const HEAD_NESTED_FUNCTION_SHA256 =
-  '2634872b50fff6b143c61befab7c810ee68cb5d36186b74cdafb9a96e73448f6'
+  '9cdc2437adb48208045f5dfc0646c90f2f7d21c2b1adb47b99fb4eff351641bc'
 // -1 registration and -1 removal: the Markdown actions' `BackHandler` pair is `useBackClaim`'s.
 const HEAD_NATIVE_REGISTRATION_SHA256 =
   '87d4599f475575131d4d5daa20f0dac579ca6c829353cbb654206ea6965dadae'
@@ -174,9 +175,9 @@ const HEAD_TIMER_CLEANUP_SHA256 = 'c73f1d1c2cc89642f3d727d6f3b6b81860a9d6f342345
 // 529 -> 530, and the host-JSX hash: `key="terminal-frame"`, so the page's frame mounts with its
 // onLayout rather than reusing the loading View. Native measured 47 rows before and after: its
 // frame reported either way, and its window is its frame, so both measure paths agree there.
-// +4 for the same activation's params.
+// +4 for the same activation's params; -1 for the older-host chat path's early `'agent-session'`.
 const HEAD_RUNTIME_STRING_SHA256 =
-  '61af32a9d79c98edc543b3944d65edee2d4ba361589e03ae0777978790d66ee6'
+  '23f1998ab382fcb6ed0d6020abd7f7a1aa82494b35186f8d236ef7604842d7b9'
 // Moved by both of the dock's fields: their refs, and the live one's submit handler, are the seam's now.
 const HEAD_HOST_JSX_SHA256 = 'ca4c8b46af86a05cb671de91c22111c9e4aaeefd4a04c7b8b09976ca01a31c9b'
 const HEAD_LEAF_JSX_SHA256 = 'c7e1a4b90197697f1eaa640c38da63281b4f7b84fb036ae2152f00c2f7d7cb77'
@@ -616,7 +617,7 @@ describe('mobile session route extraction parity', () => {
 
   it('preserves runtime strings, styles, and the expanded JSX tree', () => {
     const strings = readRuntimeStrings()
-    expect(strings).toHaveLength(549)
+    expect(strings).toHaveLength(548)
     expect(hash(strings)).toBe(HEAD_RUNTIME_STRING_SHA256)
     const jsx = readJsxFacts(readDefinitions())
     expect(jsx.host).toHaveLength(124)

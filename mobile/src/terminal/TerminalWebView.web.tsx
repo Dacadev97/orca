@@ -50,7 +50,9 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
       // were gone so was the component holding this handle.
       pingsOnForegroundRecovery: () => false
     })
-    const { clearEngineError, engineError, handle, layout, receive, resetReadiness } = controller
+    const { clearEngineError, engineError, handle, receive, resetReadiness } = controller
+    // The scale the next document is built at; later changes reach it as set-font-scale.
+    const textScaleRef = useRef(props.textScale ?? 1)
     // The page's answer to the WebView's reload: drop the document and build another one. The host
     // element is keyed on it so React replaces the div rather than handing back one xterm left in.
     const [generation, setGeneration] = useState(0)
@@ -62,6 +64,9 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
     useEffect(() => {
       receiveRef.current = receive
     }, [receive])
+    useEffect(() => {
+      textScaleRef.current = props.textScale ?? 1
+    }, [props.textScale])
 
     useEffect(() => {
       // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: react-native-web renders View as a div and forwards the ref to it; this module only ever runs in that build.
@@ -71,7 +76,11 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
       }
       let live
       try {
-        live = mountTerminalWebDocument(host, (message) => receiveRef.current?.(message))
+        live = mountTerminalWebDocument(
+          host,
+          (message) => receiveRef.current?.(message),
+          textScaleRef.current
+        )
       } catch (error) {
         // A start that throws is the document's own failure and the factory has already unwound
         // it, so there is no handle and no engine ran: no `error` notify is coming. It goes down
@@ -111,10 +120,7 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
     }, [clearEngineError, resetReadiness])
 
     return (
-      <View
-        style={[TERMINAL_WEBVIEW_FRAME_STYLES.container, props.style]}
-        onLayout={(e) => layout(e.nativeEvent.layout.width, e.nativeEvent.layout.height)}
-      >
+      <View style={[TERMINAL_WEBVIEW_FRAME_STYLES.container, props.style]}>
         <View key={generation} ref={hostRef} style={TERMINAL_WEBVIEW_FRAME_STYLES.webview} />
         {engineError ? (
           <TerminalWebViewEngineErrorOverlay message={engineError} onReload={handleReload} />

@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import type { TerminalOscLinkRange } from '../../../src/shared/terminal-osc-link-ranges'
-import { createTerminalCellMetricsStore } from './terminal-cell-metrics'
+import {
+  fitDimensionsFromCell,
+  readTerminalCellMetrics,
+  terminalCellBoxes
+} from './terminal-cell-metrics'
 import type { TerminalWebViewHandle, TerminalWebViewProps } from './terminal-webview-contract'
 import { useTerminalWebViewEngineErrorState } from './terminal-webview-engine-error-state'
 import { useTerminalWebReadyWatchdog } from './terminal-webview-ready-watchdog'
@@ -75,7 +79,9 @@ export function useTerminalWebViewController(
   // document's init() rAF chain ends with a 'ready' notify that resolves it. measureFitDimensions
   // awaits this so it doesn't race ahead of term.open() / renderService population.
   const promises = useTerminalWebViewReadyPromises()
-  const cellMetrics = useMemo(() => createTerminalCellMetricsStore(), [])
+  // Why: a box that changes while the grid does not is a renderer or pixel-ratio change and needs a
+  // refit; one that arrives with a new grid is that grid's own (the DOM renderer's width follows cols).
+  const lastReportedGridRef = useRef<string | null>(null)
   const { clearEngineError, engineError, reportEngineError, reportNativeEngineError } =
     useTerminalWebViewEngineErrorState(onEngineError)
   const { armWebReadyWatchdog, clearWebReadyWatchdog } = useTerminalWebReadyWatchdog(
@@ -151,8 +157,15 @@ export function useTerminalWebViewController(
       routeTerminalQueryReply(msg, onTerminalQueryReply)
 
       if (msg.type === 'web-ready') {
-        cellMetrics.acceptWebReady(msg)
+        // Why: an open that subscribed before ready used the stored box; a different one here refits it.
+        const changed = readTerminalCellMetrics(msg).some(
+          (entry) => terminalCellBoxes.record(entry) && entry.fontScale === textScale
+        )
+        lastReportedGridRef.current = null
         confirmWebReady(true)
+        if (changed) {
+          onCellBoxChange?.()
+        }
       } else if (
         msg.type === 'pong' &&
         typeof msg.pingId === 'number' &&
@@ -165,13 +178,12 @@ export function useTerminalWebViewController(
         // measure can now safely read cell dims.
         promises.resolveReady()
       } else if (msg.type === 'cell-metrics') {
-        const corrected = cellMetrics.acceptLaidOut(msg)
-        if (
-          corrected?.fontScale === textScale &&
-          typeof msg.cols === 'number' &&
-          typeof msg.rows === 'number'
-        ) {
-          onCellBoxChange?.({ cols: msg.cols, rows: msg.rows })
+        const [laidOut] = readTerminalCellMetrics(msg)
+        const grid = `${String(msg.cols)}x${String(msg.rows)}`
+        const sameGrid = grid === lastReportedGridRef.current
+        lastReportedGridRef.current = grid
+        if (laidOut && terminalCellBoxes.record(laidOut) && sameGrid) {
+          onCellBoxChange?.()
         }
       } else if (msg.type === 'measure-result') {
         promises.resolveMeasure(msg)
@@ -193,7 +205,6 @@ export function useTerminalWebViewController(
       }
     },
     [
-      cellMetrics,
       confirmWebReady,
       promises,
       reportEngineError,
@@ -223,11 +234,10 @@ export function useTerminalWebViewController(
   const resetReadiness = useCallback(() => {
     isWebReadyRef.current = false
     pendingPingIdRef.current = null
-    cellMetrics.clear()
     pendingMessages.clear()
     writeCoalescer.clear()
     armWebReadyWatchdog()
-  }, [armWebReadyWatchdog, cellMetrics, pendingMessages, writeCoalescer])
+  }, [armWebReadyWatchdog, pendingMessages, writeCoalescer])
 
   useEffect(() => {
     postMessage({ type: 'set-theme', terminalTheme })
@@ -291,16 +301,15 @@ export function useTerminalWebViewController(
         writeCoalescer.clear()
         postMessage({ type: 'clear' })
       },
-      fitDimensions(containerHeight?: number) {
-        return cellMetrics.fit(textScale, containerHeight) ?? null
+      fitDimensions(frame: { width: number; height: number }) {
+        const cell = terminalCellBoxes.get(textScale)
+        return cell && frame.width > 0 && frame.height > 0
+          ? fitDimensionsFromCell(cell, frame.width, frame.height)
+          : null
       },
       measureFitDimensions(containerHeight?: number) {
         if (!isWebReadyRef.current) {
           return Promise.resolve(null)
-        }
-        const fitted = cellMetrics.fit(textScale, containerHeight)
-        if (fitted !== undefined) {
-          return Promise.resolve(fitted)
         }
         return promises.measure(sendToDocument, containerHeight)
       },
@@ -319,7 +328,6 @@ export function useTerminalWebViewController(
     }),
     [
       armWebReadyWatchdog,
-      cellMetrics,
       pingsOnForegroundRecovery,
       postMessage,
       promises,
@@ -332,8 +340,6 @@ export function useTerminalWebViewController(
 
   return {
     armWebReadyWatchdog,
-    /** The terminal view's RN layout; the document's own box stands in until it arrives. */
-    layout: cellMetrics.layout,
     clearEngineError,
     confirmWebReady,
     engineError,

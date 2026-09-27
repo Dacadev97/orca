@@ -12,22 +12,25 @@ const HANDLE = 'term-1'
 const PHONE = { cols: 55, rows: 44 }
 
 describe('seedTerminalViewportFromCellMetrics', () => {
-  function seedArgs(fitDimensions: (height?: number) => typeof PHONE | null) {
+  function seedArgs(
+    fitDimensions: (frame: { width: number; height: number }) => typeof PHONE | null
+  ) {
     const viewportRef: { current: typeof PHONE | null } = { current: null }
     return {
       handle: HANDLE,
       ref: { fitDimensions: vi.fn(fitDimensions) },
       viewportRef,
       viewportMeasuredRef: { current: false },
+      terminalFrameWidthRef: { current: 427.5 },
       terminalFrameHeightRef: { current: 751 },
       onMeasured: vi.fn()
     }
   }
 
-  it('sizes an unmeasured route from the reported cell box against the frame height', () => {
+  it('sizes an unmeasured route from the stored cell box against the laid-out frame', () => {
     const args = seedArgs(() => PHONE)
     seedTerminalViewportFromCellMetrics(args)
-    expect(args.ref.fitDimensions).toHaveBeenCalledWith(751)
+    expect(args.ref.fitDimensions).toHaveBeenCalledWith({ width: 427.5, height: 751 })
     expect(args.viewportRef.current).toEqual(PHONE)
     expect(args.viewportMeasuredRef.current).toBe(true)
     expect(args.onMeasured).toHaveBeenCalledWith(HANDLE, PHONE, 751)
@@ -51,8 +54,12 @@ describe('seedTerminalViewportFromCellMetrics', () => {
 type StreamHandler = (result: unknown) => void
 
 /** The route's subscribe, driven end to end against a recording client and terminal. */
-function subscriptionHarness(initialFit: typeof PHONE | null) {
-  let fit = initialFit
+function subscriptionHarness(opts: {
+  fit: typeof PHONE | null
+  webReady: boolean
+  frameWidth?: number
+}) {
+  let fit = opts.fit
   const order: string[] = []
   const handlers: StreamHandler[] = []
   const terminal: TerminalWebViewHandle = {
@@ -73,6 +80,8 @@ function subscriptionHarness(initialFit: typeof PHONE | null) {
   const subscribeSeqRef = { current: new Map<string, number>() }
   const subscribingHandlesRef = { current: new Set<string>() }
   const initializedHandlesRef = { current: new Set<string>() }
+  const webReadyHandlesRef = { current: new Set<string>(opts.webReady ? [HANDLE] : []) }
+  const terminalFrameWidthRef = { current: opts.frameWidth ?? 427 }
   const fields = {
     client: {
       subscribe: vi.fn(
@@ -94,10 +103,11 @@ function subscriptionHarness(initialFit: typeof PHONE | null) {
     initializedHandlesRef,
     terminalDiagnosticsRef: { current: new MobileTerminalDiagnostics() },
     viewportResubscribeBudgetRef: { current: new TerminalViewportResubscribeBudget() },
-    webReadyHandlesRef: { current: new Set([HANDLE]) },
+    webReadyHandlesRef,
     activeHandleRef: { current: HANDLE },
     subscribeSeqRef,
     layoutSeqRef: { current: new Map() },
+    terminalFrameWidthRef,
     terminalFrameHeightRef: { current: 751 },
     scheduleDelayedAction: vi.fn(),
     showToast: vi.fn(),
@@ -113,13 +123,10 @@ function subscriptionHarness(initialFit: typeof PHONE | null) {
     signalTerminalInventoryRecovery: vi.fn()
   }
   let subscribe: ((handle: string) => void) | undefined
-  let cellBoxChange: ((handle: string, grid: typeof PHONE) => void) | undefined
   function Probe() {
     // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the hook destructures only the fields built above.
     const scope = fields as unknown as MobileSessionTerminalSubscriptionFoundationModel
-    const model = useMobileSessionTerminalSubscription(scope)
-    subscribe = model.subscribeToTerminal
-    cellBoxChange = model.handleTerminalCellBoxChange
+    subscribe = useMobileSessionTerminalSubscription(scope).subscribeToTerminal
     return null
   }
   act(() => {
@@ -131,13 +138,16 @@ function subscriptionHarness(initialFit: typeof PHONE | null) {
     })
   return {
     order,
-    subscribe: () => subscribe!(HANDLE),
+    subscribe: () => act(() => subscribe!(HANDLE)),
     scrollback,
     terminal,
-    // The document's laid-out box now fits `next`; `grid` is what xterm, and so the host, has.
-    layOut: (next: typeof PHONE, grid: typeof PHONE) => {
+    // The document's web-ready: xterm's box is now in the store, so the fit answers.
+    reportReady: (next: typeof PHONE) => {
       fit = next
-      act(() => cellBoxChange!(HANDLE, grid))
+      webReadyHandlesRef.current.add(HANDLE)
+    },
+    layOutFrame: (width: number) => {
+      terminalFrameWidthRef.current = width
     }
   }
 }
@@ -149,9 +159,12 @@ afterEach(() => {
 })
 
 describe('a terminal first subscribe', () => {
-  it('carries phone dims with no init before it, and paints once', async () => {
-    const harness = subscriptionHarness(PHONE)
-    act(() => harness.subscribe())
+  it('waits, on the first open at a text size, for the document to report the box xterm laid out', async () => {
+    const harness = subscriptionHarness({ fit: null, webReady: false })
+    harness.subscribe()
+    expect(harness.order).toEqual([])
+    harness.reportReady(PHONE)
+    harness.subscribe()
     expect(harness.order).toEqual(['subscribe {"cols":55,"rows":44}'])
     harness.scrollback(0, PHONE.cols, PHONE.rows)
     await act(async () => {})
@@ -159,9 +172,28 @@ describe('a terminal first subscribe', () => {
     expect(harness.terminal.measureFitDimensions).not.toHaveBeenCalled()
   })
 
+  it('subscribes at once from the stored box when the text size was laid out before', async () => {
+    const harness = subscriptionHarness({ fit: PHONE, webReady: false })
+    harness.subscribe()
+    expect(harness.order).toEqual(['subscribe {"cols":55,"rows":44}'])
+    harness.scrollback(0, PHONE.cols, PHONE.rows)
+    await act(async () => {})
+    expect(harness.order).toEqual(['subscribe {"cols":55,"rows":44}', 'init 55x44'])
+    expect(harness.terminal.measureFitDimensions).not.toHaveBeenCalled()
+  })
+
+  it('holds a ready document without a box until its frame is laid out', () => {
+    const harness = subscriptionHarness({ fit: null, webReady: true, frameWidth: 0 })
+    harness.subscribe()
+    expect(harness.order).toEqual([])
+    harness.layOutFrame(427)
+    harness.subscribe()
+    expect(harness.order).toEqual(['subscribe null'])
+  })
+
   it('goes without dims when no cell box was reported, and the fit pass resubscribes once', async () => {
-    const harness = subscriptionHarness(null)
-    act(() => harness.subscribe())
+    const harness = subscriptionHarness({ fit: null, webReady: true })
+    harness.subscribe()
     expect(harness.order).toEqual(['subscribe null'])
     harness.scrollback(0, 120, 40)
     await vi.waitFor(() => expect(harness.order).toHaveLength(3))
@@ -170,32 +202,5 @@ describe('a terminal first subscribe', () => {
       'init 120x40',
       'subscribe {"cols":55,"rows":44}'
     ])
-  })
-
-  it('resubscribes once with corrected dims when xterm lays out a different box than the guess', async () => {
-    const harness = subscriptionHarness(PHONE)
-    act(() => harness.subscribe())
-    harness.scrollback(0, PHONE.cols, PHONE.rows)
-    await act(async () => {})
-    harness.layOut({ cols: 54, rows: 44 }, PHONE)
-    await vi.waitFor(() => expect(harness.order).toHaveLength(3))
-    harness.scrollback(1, 54, 44)
-    await act(async () => {})
-    expect(harness.order).toEqual([
-      'subscribe {"cols":55,"rows":44}',
-      'init 55x44',
-      'subscribe {"cols":54,"rows":44}',
-      'init 54x44'
-    ])
-  })
-
-  it('does nothing when the laid-out box fits the same grid', async () => {
-    const harness = subscriptionHarness(PHONE)
-    act(() => harness.subscribe())
-    harness.scrollback(0, PHONE.cols, PHONE.rows)
-    await act(async () => {})
-    harness.layOut(PHONE, PHONE)
-    await act(async () => {})
-    expect(harness.order).toEqual(['subscribe {"cols":55,"rows":44}', 'init 55x44'])
   })
 })

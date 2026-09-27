@@ -74,23 +74,24 @@ export function useMobileSessionKeyboardState(scope: MobileSessionKeyboardScope)
     subscribeToTerminal
   } = scope
   // Why: non-subscribe layout refits (tab strip, fold, rotation) live in a dedicated hook — see terminal-viewport-refit.ts.
-  const { notifyTerminalFrameHeight, notifyKeyboardVisibility } = useTerminalViewportRefit({
-    activeHandleRef,
-    terminalRefs,
-    terminalFrameHeightRef,
-    viewportRef,
-    viewportMeasuredRef,
-    nativeChatCoveredRef: showNativeChatRef,
-    clientRef,
-    deviceTokenRef,
-    initializedHandlesRef,
-    connState,
-    tabStripVisible: terminals.length > 1,
-    textScale: terminalTextScale,
-    terminalFrameWidth,
-    unsubscribeTerminal,
-    subscribeToTerminal
-  })
+  const { notifyTerminalFrameHeight, notifyKeyboardVisibility, notifyTerminalCellBoxChange } =
+    useTerminalViewportRefit({
+      activeHandleRef,
+      terminalRefs,
+      terminalFrameHeightRef,
+      viewportRef,
+      viewportMeasuredRef,
+      nativeChatCoveredRef: showNativeChatRef,
+      clientRef,
+      deviceTokenRef,
+      initializedHandlesRef,
+      connState,
+      tabStripVisible: terminals.length > 1,
+      textScale: terminalTextScale,
+      terminalFrameWidth,
+      unsubscribeTerminal,
+      subscribeToTerminal
+    })
 
   // Why: react-native-web's `Keyboard` never fires, so inside the shell's page this screen heard no
   // keyboard at all — the platform seam answers on both hosts. Visibility before height, as the
@@ -152,6 +153,7 @@ export function useMobileSessionKeyboardState(scope: MobileSessionKeyboardScope)
   return {
     notifyTerminalFrameHeight,
     notifyKeyboardVisibility,
+    notifyTerminalCellBoxChange,
     scrollActiveTabIntoView,
     handleDeleteCustomKey,
     handleManageShortcuts

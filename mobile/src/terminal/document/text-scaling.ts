@@ -92,6 +92,7 @@ export function applyTextScale(scope: TerminalDocumentScope, scale: number) {
 }
 
 export function startTextScaling(scope: TerminalDocumentScope) {
+  scope.currentTextScale = scope.initialTextScale()
   scope.scrollIndicator = elementInRoot(scope.root, 'scroll-indicator')
   scope.scrollThumb = elementInRoot(scope.root, 'scroll-thumb')
   scope.terminalFontFamily =

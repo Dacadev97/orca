@@ -61,9 +61,8 @@ export type TerminalSelectionEvents = {
   // Why: pinch-to-zoom in the terminal snaps to a text-size preset and reports it
   // here so the app persists it and keeps Settings + other panes in sync.
   onTextScaleChange?: (scale: number) => void
-  // The laid-out cell box at the current text size differs from the one fits used; `grid` is
-  // xterm's current size, which is the host's.
-  onCellBoxChange?: (grid: { cols: number; rows: number }) => void
+  // xterm laid out a different cell box at the same grid (renderer swap, pixel-ratio change).
+  onCellBoxChange?: () => void
 }
 
 export type TerminalWebViewProps = {
@@ -94,8 +93,8 @@ export type TerminalWebViewHandle = {
   // latest output. No-op on the alternate screen.
   reflow: (cols: number, rows: number) => void
   clear: () => void
-  /** The fit from the document's reported cell box, with no message; null until it has one. */
-  fitDimensions: (containerHeight?: number) => { cols: number; rows: number } | null
+  /** The fit for this frame from the cell box xterm laid out at the current text size; null until one is known. */
+  fitDimensions: (frame: { width: number; height: number }) => { cols: number; rows: number } | null
   measureFitDimensions: (containerHeight?: number) => Promise<{ cols: number; rows: number } | null>
   resetZoom: () => void
   cancelSelect: () => void

@@ -33,6 +33,7 @@ export function MobileSessionActiveContent({
     dictationMode,
     toastMessage,
     terminalFrameHeightRef,
+    terminalFrameWidthRef,
     setTerminalFrameWidth,
     handleTerminalTap,
     browserScreencastSupported,
@@ -56,7 +57,8 @@ export function MobileSessionActiveContent({
     notifyTerminalFrameHeight,
     setTerminalWebViewRef,
     handleTerminalWebReady,
-    handleTerminalCellBoxChange,
+    handleTerminalFrameLayout,
+    notifyTerminalCellBoxChange,
     handleFileTap,
     handleNativeChatFileTap,
     handleTerminalOpenUrl,
@@ -199,11 +201,13 @@ export function MobileSessionActiveContent({
       style={styles.terminalFrame}
       onLayout={(e) => {
         terminalFrameHeightRef.current = e.nativeEvent.layout.height
+        terminalFrameWidthRef.current = e.nativeEvent.layout.width
         // Why: notify height imperatively so dock settling re-fits the PTY without rerendering SessionScreen.
         const nextWidth = Math.round(e.nativeEvent.layout.width)
         const nextHeight = Math.round(e.nativeEvent.layout.height)
         setTerminalFrameWidth((prev) => (prev === nextWidth ? prev : nextWidth))
         notifyTerminalFrameHeight(nextHeight)
+        handleTerminalFrameLayout()
       }}
     >
       {terminals.map((terminal) => (
@@ -221,7 +225,7 @@ export function MobileSessionActiveContent({
           }}
           onRef={setTerminalWebViewRef}
           onWebReady={handleTerminalWebReady}
-          onCellBoxChange={handleTerminalCellBoxChange}
+          onCellBoxChange={notifyTerminalCellBoxChange}
           onSelectionMode={handleSelectionMode}
           onSelectionCopy={handleSelectionCopy}
           onSelectionEvicted={handleSelectionEvicted}

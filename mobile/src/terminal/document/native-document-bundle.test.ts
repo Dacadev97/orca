@@ -311,7 +311,7 @@ describe('the bundled native document', () => {
     // that ships rather than about a bundle this case built for itself.
     const { script, inputs } = await terminalDocumentBundle()
     expect(inputs.filter((input) => input.includes('node_modules'))).toEqual([])
-    // 48: `cell-metrics-probe` measures the cell box for web-ready before any terminal exists.
+    // 48: `laid-out-cell-box` reads the cell box xterm laid out, for web-ready and each render.
     expect(inputs).toHaveLength(48)
     expect(script).not.toContain('__commonJS')
     // `__esm` wrappers are esbuild's answer to a cycle, and a cycle would make a module's top level

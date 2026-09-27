@@ -40,6 +40,7 @@ type TerminalViewportRefitOptions = {
 type TerminalViewportRefitNotifications = {
   notifyTerminalFrameHeight: (height: number) => void
   notifyKeyboardVisibility: (visible: boolean) => void
+  notifyTerminalCellBoxChange: (handle: string) => void
 }
 
 // Why: re-measure on layout changes outside the subscribe path (tab strip, fold/rotate/resize), or a PTY renders "cut in half" (#4579).
@@ -263,6 +264,18 @@ export function useTerminalViewportRefit(
     [notifyFrameHeightRefitEvent]
   )
 
+  // Why: a renderer swap or pixel-ratio change gives the same grid a different cell box.
+  const notifyTerminalCellBoxChange = useCallback(
+    (handle: string) => {
+      if (handle !== activeHandleRef.current) {
+        return
+      }
+      viewportMeasuredRef.current = false
+      scheduleViewportRefit()
+    },
+    [viewportMeasuredRef, scheduleViewportRefit]
+  )
+
   useEffect(() => {
     if (Platform.OS !== 'ios') {
       return
@@ -310,5 +323,5 @@ export function useTerminalViewportRefit(
     }
   }, [])
 
-  return { notifyTerminalFrameHeight, notifyKeyboardVisibility }
+  return { notifyTerminalFrameHeight, notifyKeyboardVisibility, notifyTerminalCellBoxChange }
 }

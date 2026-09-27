@@ -63,6 +63,8 @@ export type TerminalDocumentHostSeams = {
   installHostTransport: (receive: (frame: TerminalDocumentHostFrame) => void) => () => void
   /** `message-bridge`: whether the engine is here, which is what readiness is reported on. */
   hasEngine: () => boolean
+  /** `text-scaling`: the app's text scale, so the terminal built before ready lays out at it. */
+  initialTextScale: () => number
   /** Every fit, pan, scroll and overlay bound, and every client point mapped into the grid. */
   viewportRect: () => TerminalDocumentViewportRect
   /** `fit-scale`: calls back when that box changes size, handing back its removal. */
@@ -120,6 +122,8 @@ declare global {
      * quotes it. The document reaches it through a seam, so a page's mount holds its own instead.
      */
     __engineErrors?: string[]
+    /** The app's text scale, which the native component injects before the document script runs. */
+    __orcaTerminalTextScale?: unknown
   }
   const Terminal: new (options: Record<string, unknown>) => TerminalDocumentTerminal
 }
@@ -211,6 +215,11 @@ export function windowCapturedEngineErrors() {
  */
 export function windowHasEngine() {
   return window.Terminal !== undefined
+}
+
+export function windowInitialTextScale() {
+  const scale = window.__orcaTerminalTextScale
+  return typeof scale === 'number' && scale > 0 ? scale : 1
 }
 
 /**

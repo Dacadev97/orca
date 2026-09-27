@@ -1,4 +1,4 @@
-import { useRef, useCallback, forwardRef, useImperativeHandle } from 'react'
+import { useRef, useCallback, useState, forwardRef, useImperativeHandle } from 'react'
 import { Platform, View } from 'react-native'
 import { WebView, type WebViewMessageEvent } from 'react-native-webview'
 import type { TerminalWebViewHandle, TerminalWebViewProps } from './terminal-webview-contract'
@@ -24,7 +24,6 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
       clearEngineError,
       engineError,
       handle,
-      layout,
       receive,
       reportNativeEngineError,
       resetReadiness
@@ -35,6 +34,11 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
     })
 
     useImperativeHandle(ref, () => handle, [handle])
+    // Why: the document builds its terminal before ready, so it needs the text scale before any
+    // message can reach it; later changes arrive as set-font-scale.
+    const [initialTextScaleScript] = useState(
+      () => `window.__orcaTerminalTextScale = ${JSON.stringify(props.textScale ?? 1)}; true;`
+    )
 
     const handleMessage = useCallback(
       (event: WebViewMessageEvent) => {
@@ -63,13 +67,11 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
     }, [clearEngineError, resetReadiness])
 
     return (
-      <View
-        style={[TERMINAL_WEBVIEW_FRAME_STYLES.container, props.style]}
-        onLayout={(e) => layout(e.nativeEvent.layout.width, e.nativeEvent.layout.height)}
-      >
+      <View style={[TERMINAL_WEBVIEW_FRAME_STYLES.container, props.style]}>
         <WebView
           ref={webViewRef}
           source={XTERM_WEBVIEW_SOURCE}
+          injectedJavaScriptBeforeContentLoaded={initialTextScaleScript}
           style={TERMINAL_WEBVIEW_FRAME_STYLES.webview}
           originWhitelist={['*']}
           javaScriptEnabled

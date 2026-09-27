@@ -1,7 +1,8 @@
 import { createElement, createRef } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { TerminalWebView } from './TerminalWebView'
+import { terminalCellBoxes } from './terminal-cell-metrics'
 import type { TerminalWebViewHandle } from './terminal-webview-contract'
 
 const nativeWebViewMethods = vi.hoisted(() => ({
@@ -32,22 +33,26 @@ vi.mock('react-native-webview', async () => {
 
 vi.mock('lucide-react-native', () => ({ RefreshCw: 'RefreshCw' }))
 
-const CELL_1X = { fontScale: 1, cellWidth: 23 / 3, cellHeight: 17 }
-const CELL_125X = { fontScale: 1.25, cellWidth: 29 / 3, cellHeight: 21 }
+const CELL_1X = { fontScale: 1, cellWidth: 23 / 3, cellHeight: 15 }
+const FRAME = { width: 427, height: 710 }
 
-let renderer: ReactTestRenderer | null = null
+const renderers: ReactTestRenderer[] = []
+beforeEach(() => {
+  terminalCellBoxes.clear()
+})
 afterEach(() => {
-  act(() => renderer?.unmount())
-  renderer = null
+  act(() => renderers.splice(0).forEach((renderer) => renderer.unmount()))
   nativeWebViewMethods.postMessage.mockClear()
 })
 
 function mount(textScale = 1) {
   const ref = createRef<TerminalWebViewHandle>()
   const onCellBoxChange = vi.fn()
+  let renderer: ReactTestRenderer | undefined
   act(() => {
     renderer = create(createElement(TerminalWebView, { ref, textScale, onCellBoxChange }))
   })
+  renderers.push(renderer!)
   const handle = () => {
     if (!ref.current) {
       throw new Error('no handle')
@@ -61,101 +66,82 @@ function mount(textScale = 1) {
         .props.onMessage({ nativeEvent: { data: JSON.stringify(payload) } })
     })
   }
-  const rerender = (nextScale: number) => {
-    act(() => {
-      renderer!.update(
-        createElement(TerminalWebView, { ref, textScale: nextScale, onCellBoxChange })
-      )
-    })
-  }
-  return { handle, notify, rerender, onCellBoxChange }
+  const webView = () => renderer!.root.find((node) => typeof node.props.onMessage === 'function')
+  return { handle, notify, onCellBoxChange, webView }
 }
 
 function postedTypes(): unknown[] {
   return nativeWebViewMethods.postMessage.mock.calls.map(([message]) => JSON.parse(message).type)
 }
 
-const WEB_READY = {
-  type: 'web-ready',
-  cellMetrics: [CELL_1X, CELL_125X],
-  viewportWidth: 427,
-  viewportHeight: 800
-}
+const cellMetrics = (cellWidth: number, cols: number, rows = 47) => ({
+  type: 'cell-metrics',
+  cellMetrics: [{ fontScale: 1, cellWidth, cellHeight: 15 }],
+  cols,
+  rows
+})
 
-describe('terminal fit from the reported cell box', () => {
-  it('answers from web-ready with no terminal and no measure message', async () => {
+describe('the cell box xterm laid out', () => {
+  it('sizes a fit from web-ready, which the document sends once its terminal is built', () => {
     const { handle, notify } = mount()
-    notify(WEB_READY)
-    expect(handle().fitDimensions(751)).toEqual({ cols: 55, rows: 44 })
-    await expect(handle().measureFitDimensions(751)).resolves.toEqual({ cols: 55, rows: 44 })
-    expect(postedTypes()).not.toContain('measure')
-    expect(postedTypes()).not.toContain('init')
-  })
-
-  it('asks the document when an older one reports no cell box', async () => {
-    const { handle, notify } = mount()
-    notify({ type: 'web-ready' })
-    expect(handle().fitDimensions(751)).toBeNull()
-    const pending = handle().measureFitDimensions(751)
-    expect(postedTypes()).toContain('measure')
-    notify({ type: 'measure-result', cols: 55, rows: 44 })
-    await expect(pending).resolves.toEqual({ cols: 55, rows: 44 })
-  })
-
-  it('follows a text-size change without a message', () => {
-    const { handle, notify, rerender } = mount()
-    notify(WEB_READY)
-    rerender(1.25)
-    expect(handle().fitDimensions(751)).toEqual({ cols: 44, rows: 35 })
+    expect(handle().fitDimensions(FRAME)).toBeNull()
+    notify({ type: 'web-ready', cellMetrics: [CELL_1X] })
+    expect(handle().fitDimensions(FRAME)).toEqual({ cols: 55, rows: 47 })
     expect(postedTypes()).not.toContain('measure')
   })
 
-  it('corrects a wrong guess from the laid-out box and tells the view the grid it has', () => {
+  it('lets a later open at the same text size fit before its document is ready', () => {
+    const first = mount()
+    first.notify({ type: 'web-ready', cellMetrics: [CELL_1X] })
+    const second = mount()
+    expect(second.handle().fitDimensions(FRAME)).toEqual({ cols: 55, rows: 47 })
+  })
+
+  it('does not fit a text size nothing has laid out yet', () => {
+    const first = mount()
+    first.notify({ type: 'web-ready', cellMetrics: [CELL_1X] })
+    expect(mount(1.25).handle().fitDimensions(FRAME)).toBeNull()
+  })
+
+  it('refits when the box changes at the same grid, as after a renderer swap', () => {
     const { handle, notify, onCellBoxChange } = mount()
-    notify(WEB_READY)
-    const laidOut = { fontScale: 1, cellWidth: 7.8, cellHeight: 17 }
-    notify({ type: 'cell-metrics', cellMetrics: [laidOut], cols: 55, rows: 44 })
-    expect(handle().fitDimensions(751)).toEqual({ cols: 54, rows: 44 })
-    expect(onCellBoxChange).toHaveBeenCalledExactlyOnceWith({ cols: 55, rows: 44 })
-    notify({ type: 'cell-metrics', cellMetrics: [laidOut], cols: 54, rows: 44 })
+    notify({ type: 'web-ready', cellMetrics: [CELL_1X] })
+    notify(cellMetrics(23 / 3, 55))
+    expect(onCellBoxChange).not.toHaveBeenCalled()
+    notify(cellMetrics(7.8, 55))
     expect(onCellBoxChange).toHaveBeenCalledTimes(1)
+    expect(handle().fitDimensions(FRAME)).toEqual({ cols: 54, rows: 47 })
   })
 
-  it('corrects the guess once per document; later boxes only update the fit', () => {
-    const { handle, notify, onCellBoxChange } = mount()
-    notify(WEB_READY)
-    const box = (cellWidth: number, cols: number) =>
-      notify({
-        type: 'cell-metrics',
-        cellMetrics: [{ fontScale: 1, cellWidth, cellHeight: 17 }],
-        cols,
-        rows: 44
-      })
-    box(7.8, 55)
-    // Each re-init at new cols gives the DOM renderer a new width.
-    box(8.4, 54)
-    box(8.3, 50)
-    expect(onCellBoxChange).toHaveBeenCalledExactlyOnceWith({ cols: 55, rows: 44 })
-    expect(handle().fitDimensions(751)).toEqual({ cols: 51, rows: 44 })
-  })
-
-  it('says nothing when the laid-out box matches the guess or is for another text size', () => {
+  it('does not refit a box that came with a new grid, which the DOM renderer derives from cols', () => {
     const { notify, onCellBoxChange } = mount()
-    notify(WEB_READY)
-    notify({ type: 'cell-metrics', cellMetrics: [CELL_1X], cols: 55, rows: 44 })
-    const other = { fontScale: 1.25, cellWidth: 10, cellHeight: 21 }
-    notify({ type: 'cell-metrics', cellMetrics: [other], cols: 55, rows: 44 })
+    notify({ type: 'web-ready', cellMetrics: [CELL_1X] })
+    notify(cellMetrics(7.8, 55))
+    notify(cellMetrics(7.9, 54))
+    notify(cellMetrics(7.8, 55))
     expect(onCellBoxChange).not.toHaveBeenCalled()
   })
 
-  it('fits the view layout once it arrives', () => {
+  it('refits an open that subscribed from a stored box when its document lays out another', () => {
+    mount().notify({ type: 'web-ready', cellMetrics: [CELL_1X] })
+    const second = mount()
+    second.notify({ type: 'web-ready', cellMetrics: [{ ...CELL_1X, cellWidth: 7.8 }] })
+    expect(second.onCellBoxChange).toHaveBeenCalledTimes(1)
+  })
+
+  it('measures the live document for a refit', async () => {
     const { handle, notify } = mount()
-    notify(WEB_READY)
-    act(() => {
-      renderer!.root
-        .find((node) => typeof node.props.onLayout === 'function')
-        .props.onLayout({ nativeEvent: { layout: { width: 854, height: 400 } } })
-    })
-    expect(handle().fitDimensions()).toEqual({ cols: 111, rows: 23 })
+    notify({ type: 'web-ready', cellMetrics: [CELL_1X] })
+    const pending = handle().measureFitDimensions(710)
+    expect(postedTypes()).toContain('measure')
+    notify({ type: 'measure-result', cols: 55, rows: 47 })
+    await expect(pending).resolves.toEqual({ cols: 55, rows: 47 })
+  })
+
+  it('tells the document the app text scale before it builds its terminal', () => {
+    const { webView } = mount(1.25)
+    expect(webView().props.injectedJavaScriptBeforeContentLoaded).toContain(
+      'window.__orcaTerminalTextScale = 1.25'
+    )
   })
 })

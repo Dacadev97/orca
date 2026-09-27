@@ -54,6 +54,8 @@ function controller(
     showEmptyState: false,
     terminals: [],
     terminalFrameHeightRef: { current: 0 },
+    terminalFrameWidthRef: { current: 0 },
+    handleTerminalFrameLayout: () => {},
     setTerminalFrameWidth: () => {},
     notifyTerminalFrameHeight,
     dictation: { isRecording: false },

@@ -62,13 +62,21 @@ export function useMobileSessionTerminalWebview(scope: MobileSessionTabSwitching
       // Why: a just-created tab can lose activeHandleRef to a lagging snapshot; honor the pending marker so its web-ready subscribe still fires.
       const isIntendedActive =
         handle === activeHandleRef.current || handle === pendingActiveTerminalHandleRef.current
-      // Why: web-ready carried the document's cell box, so subscribeToTerminal sizes this subscribe with no terminal open.
+      // Why: web-ready carried the cell box xterm laid out, so subscribeToTerminal sizes this subscribe.
       if (isIntendedActive && !terminalUnsubsRef.current.has(handle)) {
         subscribeToTerminal(handle)
       }
     },
     [nativeChatStream, subscribeToTerminal, unsubscribeTerminal]
   )
+
+  /** The frame has a size: an open whose text size has a known cell box subscribes now. */
+  const handleTerminalFrameLayout = useCallback(() => {
+    const handle = pendingActiveTerminalHandleRef.current ?? activeHandleRef.current
+    if (handle && !terminalUnsubsRef.current.has(handle)) {
+      subscribeToTerminal(handle)
+    }
+  }, [subscribeToTerminal])
 
   useEffect(() => {
     if (activeSessionTab?.type !== 'markdown') {
@@ -91,7 +99,8 @@ export function useMobileSessionTerminalWebview(scope: MobileSessionTabSwitching
   }, [activeSessionTab, fileDocs, readFileTab])
   return {
     setTerminalWebViewRef,
-    handleTerminalWebReady
+    handleTerminalWebReady,
+    handleTerminalFrameLayout
   }
 }
 

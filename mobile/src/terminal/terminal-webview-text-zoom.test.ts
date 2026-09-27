@@ -139,8 +139,8 @@ describe('TerminalWebView text zoom', () => {
   it('loads Unicode 11 before replaying mobile terminal bytes', () => {
     expect(terminalHtmlDocumentShellSource).toContain('XTERM_ENGINE_JS')
     expect(terminalHtmlSource).toContain('window.Unicode11Addon.Unicode11Addon')
-    const open = terminalHtmlSource.indexOf('scope.term.open(scope.surface!)')
-    const unicode = terminalHtmlSource.indexOf("scope.term.unicode.activeVersion = '11'")
+    const open = terminalHtmlSource.indexOf('term.open(scope.surface!)')
+    const unicode = terminalHtmlSource.indexOf("term.unicode.activeVersion = '11'")
     const replay = terminalHtmlSource.indexOf("enqueueWrite(scope, ESC + '[0m' + replayData)")
     expect(open).toBeGreaterThanOrEqual(0)
     expect(unicode).toBeGreaterThan(open)

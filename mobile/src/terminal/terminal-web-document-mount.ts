@@ -97,12 +97,13 @@ function createPageWebglAddon(onFallback: (reason: string) => void) {
  */
 export function mountTerminalWebDocument(
   host: HTMLElement,
-  receive: (message: Record<string, unknown>) => void
+  receive: (message: Record<string, unknown>) => void,
+  textScale = 1
 ): TerminalWebDocument {
   ensureDocumentStyle()
   host.classList.add(HOST_CLASS)
   host.innerHTML = TERMINAL_DOCUMENT_MARKUP
-  const started = startDocumentOrGiveTheHostBack(host, receive)
+  const started = startDocumentOrGiveTheHostBack(host, receive, textScale)
 
   return {
     send: (command) => {
@@ -128,10 +129,11 @@ export function mountTerminalWebDocument(
  */
 function startDocumentOrGiveTheHostBack(
   host: HTMLElement,
-  receive: (message: Record<string, unknown>) => void
+  receive: (message: Record<string, unknown>) => void,
+  textScale: number
 ) {
   try {
-    return startPageDocument(host, receive)
+    return startPageDocument(host, receive, textScale)
   } catch (error) {
     host.innerHTML = ''
     host.classList.remove(HOST_CLASS)
@@ -140,7 +142,11 @@ function startDocumentOrGiveTheHostBack(
 }
 
 /** The eleven seams, as the page answers them. */
-function startPageDocument(host: HTMLElement, receive: (message: Record<string, unknown>) => void) {
+function startPageDocument(
+  host: HTMLElement,
+  receive: (message: Record<string, unknown>) => void,
+  textScale: number
+) {
   // Written by this document's own reporter: `startHostNotify` installs it through the seam below,
   // which here is a `window` error listener, and every error it forwards is appended before the
   // report that quotes it. What the page cannot have is the WebView head's half — a buffer open
@@ -185,6 +191,8 @@ function startPageDocument(host: HTMLElement, receive: (message: Record<string, 
     // Ruling 24: the WebView reads a global the engine bundle installs, because its script tag can
     // fail. Here the engine is the import above, so it is here or this module did not load.
     hasEngine: () => true,
+
+    initialTextScale: () => textScale,
 
     // The window here is the whole page, header and dock included; the grid is shown in the host.
     viewportRect: () => {

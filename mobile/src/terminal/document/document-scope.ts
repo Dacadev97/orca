@@ -9,6 +9,7 @@ import {
   postToReactNativeWebView,
   windowCapturedEngineErrors,
   windowHasEngine,
+  windowInitialTextScale,
   observeWindowViewport,
   windowViewportRect,
   type TerminalDocumentHost,
@@ -158,6 +159,8 @@ export type TerminalDocumentState = {
   pendingTerm: TerminalDocumentTerminal | null
   /** `surface-swap`: the terminal the committed surface is showing. */
   committedTerm: TerminalDocumentTerminal | null
+  /** `terminal-init`: the terminal built before ready, until the first init reuses it. */
+  provisionalTerm: TerminalDocumentTerminal | null
   /** `surface-swap`: the surface the committed terminal is mounted on. */
   committedSurface: HTMLElement | null
   /** `surface-swap`: the hidden replacement surface, until it commits. */
@@ -298,6 +301,7 @@ function createTerminalDocumentState(): TerminalDocumentState {
     surface: null,
     pendingTerm: null,
     committedTerm: null,
+    provisionalTerm: null,
     committedSurface: null,
     pendingSurface: null,
     scrollIndicator: null,
@@ -349,6 +353,7 @@ function createTerminalDocumentHostSeams(): TerminalDocumentHostSeams {
     paintDocumentBackground: paintWindowDocumentBackground,
     installHostTransport: installWindowHostTransport,
     hasEngine: windowHasEngine,
+    initialTextScale: windowInitialTextScale,
     viewportRect: windowViewportRect,
     observeViewport: observeWindowViewport,
     root: null

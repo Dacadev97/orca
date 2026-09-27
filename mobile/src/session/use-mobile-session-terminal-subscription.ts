@@ -3,7 +3,6 @@ import { isTerminalOscLinkRanges } from '../../../src/shared/terminal-osc-link-r
 import * as nativeChatTerminalStream from './mobile-native-chat-terminal-stream'
 import { seedTerminalViewportFromCellMetrics } from './mobile-terminal-first-subscribe-viewport'
 import { subscribeMobileTerminalSafely } from './mobile-terminal-stream-subscribe'
-import { useTerminalCellBoxRefit } from './use-mobile-session-terminal-cell-box-refit'
 import { mobileTerminalSnapshotByteBudget } from './terminal-snapshot-byte-budget'
 import {
   readTerminalViewportDims,
@@ -36,6 +35,7 @@ export function useMobileSessionTerminalSubscription(
     activeHandleRef,
     subscribeSeqRef,
     layoutSeqRef,
+    terminalFrameWidthRef,
     terminalFrameHeightRef,
     scheduleDelayedAction,
     showToast,
@@ -79,19 +79,29 @@ export function useMobileSessionTerminalSubscription(
           logSkippedGate('no-webview-ref')
           return
         }
-        if (!webReadyHandlesRef.current.has(handle)) {
-          logSkippedGate('webview-not-ready')
-          return
-        }
         seedTerminalViewportFromCellMetrics({
           handle,
           ref,
           viewportRef,
           viewportMeasuredRef,
+          terminalFrameWidthRef,
           terminalFrameHeightRef,
           onMeasured: (measuredHandle, dims, frameHeight) =>
             diagnostics.viewportMeasured(measuredHandle, dims, frameHeight)
         })
+        // Why: with the phone's dims in hand the subscribe need not wait for the document; the
+        // commands it causes queue until the document is ready.
+        if (!viewportMeasuredRef.current) {
+          if (!webReadyHandlesRef.current.has(handle)) {
+            logSkippedGate('webview-not-ready')
+            return
+          }
+          // Why: the frame's first layout subscribes it; going now would miss the dims (page web-ready precedes it).
+          if (!(terminalFrameWidthRef.current > 0)) {
+            logSkippedGate('frame-not-laid-out')
+            return
+          }
+        }
       }
 
       subscribingHandlesRef.current.add(handle)
@@ -296,10 +306,8 @@ export function useMobileSessionTerminalSubscription(
       signalTerminalInventoryRecovery
     ]
   )
-  const handleTerminalCellBoxChange = useTerminalCellBoxRefit(scope, subscribeToTerminal)
   return {
-    subscribeToTerminal,
-    handleTerminalCellBoxChange
+    subscribeToTerminal
   }
 }
 

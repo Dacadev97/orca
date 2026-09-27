@@ -4,7 +4,7 @@ import type { TerminalDocumentScope } from './document-scope'
 import { logFeedAndEvict } from './selection-state-and-eviction'
 import { emitKeyboardAvoidanceMetrics } from './keyboard-avoidance-metrics'
 import { emitModesIfChanged } from './mode-mirroring'
-import { reportLaidOutCellBox } from './cell-metrics-probe'
+import { reportLaidOutCellBox } from './laid-out-cell-box'
 
 export function attachTermObservers(scope: TerminalDocumentScope) {
   if (!scope.term) {

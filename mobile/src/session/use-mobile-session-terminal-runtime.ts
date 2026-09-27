@@ -103,6 +103,8 @@ export function useMobileSessionTerminalRuntime(scope: MobileSessionScreenStateM
   const sendingRef = useRef(false)
   // Why: exact terminal-frame height for measureFitDimensions; window.innerHeight can overstate the visible area.
   const terminalFrameHeightRef = useRef<number>(0)
+  // Why: unrounded frame width, which with the height sizes a first subscribe from a known cell box.
+  const terminalFrameWidthRef = useRef<number>(0)
   // Why: sidebar resizes change the terminal frame width without a window-dim change; track it so the refit hook re-fits (see terminal-viewport-refit.ts).
   const [terminalFrameWidth, setTerminalFrameWidth] = useState(0)
   const activeSessionTab = sessionTabs.find((tab) => tab.id === activeSessionTabId) ?? null
@@ -196,6 +198,7 @@ export function useMobileSessionTerminalRuntime(scope: MobileSessionScreenStateM
     layoutSeqRef,
     sendingRef,
     terminalFrameHeightRef,
+    terminalFrameWidthRef,
     terminalFrameWidth,
     setTerminalFrameWidth,
     activeSessionTab,

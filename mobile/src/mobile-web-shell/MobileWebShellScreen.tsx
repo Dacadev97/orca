@@ -188,8 +188,7 @@ export function MobileWebShellScreen({
     reportPageBackClaim,
     pageReady,
     pageFrame,
-    backClaimed,
-    pageOwnsSafeArea
+    backClaimed
   } = useMobileWebShellSession({ hostId, routePathname: route.pathname, runtime })
   // Which mount the notice was dismissed on, not whether it was: a later refusal opens its own
   // generation under a new session id, so it is not silenced by a tap on the one before it.
@@ -246,12 +245,12 @@ export function MobileWebShellScreen({
     // the map as they are made. This re-seats that map on the store afterwards, for the key whose
     // write never persisted, and it runs on every ask because a document that reloads inside this
     // mount asks again.
-    onPageReady: (ready) => {
-      reportPageReady(ready)
+    onPageReady: () => {
+      reportPageReady()
       void refreshStorage()
     },
     // The one thing that says the page is something to look at. The cover below stays up until it
-    // lands, for a page that declared it would send one.
+    // lands.
     onPagePainted: reportPagePainted,
     // While this is true the key below belongs to the page, not to the stack this screen sits on.
     onPageBackClaim: reportPageBackClaim,
@@ -359,11 +358,9 @@ export function MobileWebShellScreen({
     <View
       style={[
         styles.shellRoot,
-        // Edge-to-edge like a native screen, for a page that pads for the bars itself; an older page
-        // keeps the strips. The banner takes the status bar strip when it shows.
-        pageOwnsSafeArea
-          ? { paddingTop: noticeShown ? insets.top : 0 }
-          : { paddingTop: insets.top, paddingBottom: insets.bottom }
+        // Edge-to-edge like a native screen: the page pads for the bars itself from the insets
+        // `init` carries. The banner takes the status bar strip when it shows.
+        { paddingTop: noticeShown ? insets.top : 0 }
       ]}
       testID="mobile-web-shell-ready"
     >

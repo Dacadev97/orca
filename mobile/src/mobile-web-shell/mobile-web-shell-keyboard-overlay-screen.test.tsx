@@ -31,8 +31,6 @@ import {
   renderScreen as mountScreen
 } from './mobile-web-shell-screen-test-harness'
 import { readBridgeHostMessage } from './bridge/bridge-envelope'
-import { BRIDGE_ROUTE_UPDATE_ACCEPT } from './bridge/bridge-route-update'
-import { BRIDGE_SAFE_AREA_ACCEPT } from './bridge/bridge-safe-area-insets'
 import { MobileWebShellScreen } from './MobileWebShellScreen'
 import type { MobileWebShellSessionState } from './mobile-web-shell-session-contract'
 import type { ReactTestRenderer } from 'react-test-renderer'
@@ -55,16 +53,10 @@ const WINDOW = { top: 44, right: 0, bottom: 8, left: 0 }
 describe('a page the keyboard covers', () => {
   async function openPage(sessionId: string) {
     dependencies.client = createFakeRpcClient()
-    dependencies.pageOwnsSafeArea = true
     const tree = await renderScreen(readyState(sessionId))
     await act(async () => {
       byName(tree, 'ShellViewProbe')[0]?.props.onBridgeMessage({
-        nativeEvent: {
-          json: clientFrame({
-            type: 'ready',
-            accepts: [BRIDGE_ROUTE_UPDATE_ACCEPT, BRIDGE_SAFE_AREA_ACCEPT]
-          })
-        }
+        nativeEvent: { json: clientFrame({ type: 'ready' }) }
       })
     })
     const root = () => tree.root.find((node) => node.props.testID === 'mobile-web-shell-ready')

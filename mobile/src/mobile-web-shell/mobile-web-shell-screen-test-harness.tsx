@@ -55,8 +55,6 @@ export type ScreenDependencies = {
   setScreenOptions: Mock
   /** Whether the session says the page is holding the device Back key. */
   backClaimed: boolean
-  /** Whether the session says the page pads for the system bars itself. */
-  pageOwnsSafeArea: boolean
   /** What `Platform.OS` answers, which picks the keyboard events. */
   platform: 'ios' | 'android'
   reportPageBackClaim: Mock
@@ -114,7 +112,6 @@ export function createScreenDependencies(): ScreenDependencies {
     backHandlers: new Map(),
     setScreenOptions: vi.fn(),
     backClaimed: false,
-    pageOwnsSafeArea: false,
     platform: 'ios',
     reportPageBackClaim: vi.fn(),
     sendBackDelivers: true,
@@ -154,7 +151,6 @@ export function resetScreenDependencies(dependencies: ScreenDependencies): void 
   dependencies.setScreenOptions.mockReset()
   dependencies.reportPageBackClaim.mockReset()
   dependencies.backClaimed = false
-  dependencies.pageOwnsSafeArea = false
   dependencies.platform = 'ios'
   dependencies.sendBackDelivers = true
   dependencies.backSends = 0

@@ -14,10 +14,7 @@ import type { BridgeSessionBack } from './bridge-host-back'
 import type { BridgeNavigateBackOutcome } from './bridge-host-contract'
 import type { BridgeNativeVerb } from './bridge/bridge-native-verbs'
 import type { BridgeErrorCapture } from './bridge/bridge-error-capture'
-import type {
-  MobileWebShellSessionState,
-  PageReadyDeclaration
-} from './mobile-web-shell-session-contract'
+import type { MobileWebShellSessionState } from './mobile-web-shell-session-contract'
 import type { PageHostSnapshot } from './use-page-host-snapshot'
 import type { PageStorageForInit } from './page-storage-keys'
 
@@ -117,10 +114,9 @@ export type MobileWebShellBridgeArgs = {
   onStorageWrite: (key: string, value: string | null) => void
   /** The page could not render the generation on screen. Reported, never recovered from here. */
   onPageFault: (error: BridgeErrorCapture) => void
-  /** The page asked for a session, and what it declared it reports. Reported so the screen can
-   *  stop waiting for it, and so it knows whether a paint report is coming. */
-  onPageReady: (ready: PageReadyDeclaration) => void
-  /** The page has a frame on screen, from a page that said it would report one. */
+  /** The page asked for a session. Reported so the screen can stop waiting for it. */
+  onPageReady: () => void
+  /** The page has a frame on screen. */
   onPagePainted: () => void
   /** The page is holding the device Back key, or has let it go. False arrives on its own for
    *  every way a document ends, so no claim outlives the page that made it. */
@@ -227,7 +223,7 @@ export function useMobileWebShellBridge(args: MobileWebShellBridgeArgs): MobileW
       onRouteParamClear: (param, value) => argsRef.current.onRouteParamClear(param, value),
       onRouteRefused: (issue) => argsRef.current.onRouteRefused(issue),
       onBinaryFramesDropped: (total) => argsRef.current.onBinaryFramesDropped(total),
-      onPageReady: (ready) => argsRef.current.onPageReady(ready),
+      onPageReady: () => argsRef.current.onPageReady(),
       onPagePainted: () => argsRef.current.onPagePainted(),
       onPageBackClaim: (claimed) => argsRef.current.onPageBackClaim(claimed)
     })

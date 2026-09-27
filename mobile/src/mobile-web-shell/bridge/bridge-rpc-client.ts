@@ -110,7 +110,6 @@ export type BridgeRpcClient = RpcClient & {
   /**
    * Tells the shell this document has a frame on screen, which is the only thing that does: the
    * shell sees a document commit and a page say `ready`, and neither of those is a painted tree.
-   * Declared in `ready.reports`, so a shell waiting for it is one this page will answer.
    */
   notifyPagePainted: () => void
   /**
@@ -143,9 +142,8 @@ export type BridgeRpcClient = RpcClient & {
    * (ruling 34). The reader erases: the shell tracks no delivery, so a request stays on the route
    * and keeps arriving until the page that applied it says so.
    *
-   * False when this shell never declared it takes one, which is every shell older than the field.
-   * Nothing is owed the caller either way — a clear that did not leave is repaired by the request
-   * arriving again, which is the same path a lost frame takes.
+   * False when the frame could not leave. Nothing is owed the caller — a clear that did not leave
+   * is repaired by the request arriving again, which is the same path a lost frame takes.
    */
   clearRouteParam: (param: BridgeClearableRouteParam, value: string) => boolean
 }
@@ -294,8 +292,7 @@ export function createBridgeRpcClient(options: BridgeRpcClientOptions): BridgeRp
     subscriptions,
     report,
     // Declared here rather than beside the others: the re-assert has to run after the session has
-    // taken this frame, so the claim's own gate reads this `init`'s `accepts` and a shell that
-    // never named it still hears nothing.
+    // taken this frame.
     acceptInit: (message) => {
       handshake.stop()
       shellSession.accept(message)
@@ -414,8 +411,7 @@ export function createBridgeRpcClient(options: BridgeRpcClientOptions): BridgeRp
     send: posted,
     requireSession,
     isClosed: () => closed,
-    hasGrant: (name) => shellSession.current()?.grants.native.includes(name) === true,
-    shellAccepts: (name) => shellSession.current()?.accepts.includes(name) === true
+    hasGrant: (name) => shellSession.current()?.grants.native.includes(name) === true
   })
 
   const unsubscribeFromMessages = options.onMessage(receive)
@@ -470,7 +466,6 @@ export function createBridgeRpcClient(options: BridgeRpcClientOptions): BridgeRp
     onKeyboardInsetUpdate: shellSession.onKeyboardInsetUpdate,
     getShellSession: shellSession.current,
     clearRouteParam: (param, value) =>
-      shellSession.current()?.accepts.includes(BRIDGE_ROUTE_PARAM_CLEAR) === true &&
       posted({
         v: BRIDGE_PROTOCOL_VERSION,
         type: 'notify',

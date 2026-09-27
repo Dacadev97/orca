@@ -8,10 +8,6 @@ import {
   type BridgeInitHost,
   type BridgeInitRoute
 } from './bridge-envelope'
-import { BRIDGE_PAGE_CLIENT_IDENTITY_ACCEPT } from './bridge-page-client-identity'
-import { BRIDGE_BACK_CLAIM_NOTIFY } from './bridge-page-back'
-import { BRIDGE_PAGE_PAINTED } from './bridge-page-painted'
-import { BRIDGE_ROUTE_PARAM_CLEAR } from './bridge-route-update'
 import {
   sameSafeAreaInsets,
   ZERO_SAFE_AREA_INSETS,
@@ -34,18 +30,6 @@ export const BRIDGE_NATIVE_GRANTS: readonly string[] = [
   ...MOBILE_WEB_SHELL_GRANTS
 ]
 
-/**
- * What this shell accepts from a page beyond the frames every shell has always taken. Additive
- * names on an optional list, so no version moves: a page that knows none posts none, one told
- * nothing claims no identity, and one told nothing reports no paint.
- */
-export const BRIDGE_SHELL_ACCEPTS: readonly string[] = [
-  BRIDGE_ROUTE_PARAM_CLEAR,
-  BRIDGE_PAGE_CLIENT_IDENTITY_ACCEPT,
-  BRIDGE_PAGE_PAINTED,
-  BRIDGE_BACK_CLAIM_NOTIFY
-]
-
 /** The one frame that starts a session, built in one place so its caps and its grants agree. */
 export function createBridgeInitFrame(args: {
   sessionId: string
@@ -64,8 +48,6 @@ export function createBridgeInitFrame(args: {
   pageRouteGrants?: readonly { pathname: string; grants: readonly string[] }[]
   /** What this session may do: the protocol's own grant plus what its route declared. */
   granted: readonly string[]
-  /** What this shell takes from the page beyond the frames every shell has taken (ruling 34). */
-  accepts?: readonly string[]
   /** The host the page is showing, minus the credential the bridge already carries for it. */
   host: BridgeInitHost
   /** The allowlisted keys as the app holds them right now. */
@@ -100,11 +82,6 @@ export function createBridgeInitFrame(args: {
       ? {}
       : { keyboardInset: args.keyboardInset }),
     pageRoutes: [...args.pageRoutes],
-    // Omitted when empty for the reason `storageOversize` is: a shell that declares nothing and
-    // one that declares an empty list are the same answer to the page's check.
-    ...(args.accepts === undefined || args.accepts.length === 0
-      ? {}
-      : { accepts: [...args.accepts] }),
     // Copied entry by entry for the reason the grants are: nothing the shell keeps may be
     // reachable through a frame it hands out.
     ...(args.pageRouteGrants === undefined

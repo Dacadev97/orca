@@ -138,6 +138,23 @@ describe('the cell box xterm laid out', () => {
     await expect(pending).resolves.toEqual({ cols: 55, rows: 47 })
   })
 
+  it('keeps an init queued before the first document loads, as a subscribe from the store does', () => {
+    const { handle, notify, webView } = mount()
+    handle().init(55, 47, 'snapshot')
+    act(() => webView().props.onLoadStart())
+    notify({ type: 'web-ready', cellMetrics: [CELL_1X] })
+    expect(postedTypes()).toContain('init')
+  })
+
+  it('drops what was queued for a document that a reload replaces', () => {
+    const { handle, notify, webView } = mount()
+    act(() => webView().props.onLoadStart())
+    handle().init(55, 47, 'snapshot')
+    act(() => webView().props.onLoadStart())
+    notify({ type: 'web-ready', cellMetrics: [CELL_1X] })
+    expect(postedTypes()).not.toContain('init')
+  })
+
   it('tells the document the app text scale before it builds its terminal', () => {
     const { webView } = mount(1.25)
     expect(webView().props.injectedJavaScriptBeforeContentLoaded).toContain(

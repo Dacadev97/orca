@@ -161,7 +161,11 @@ describe('terminal write coalescer boundaries', () => {
     const body = controllerSource.slice(start, controllerSource.indexOf('}, [', start))
     expect(body).toContain('pendingMessages.clear()')
     expect(body).toContain('writeCoalescer.clear()')
-    expect(webViewSource).toContain('onLoadStart={resetReadiness}')
+    expect(webViewSource).toContain('onLoadStart={handleLoadStart}')
+    const loadStart = controllerSource.indexOf('const handleLoadStart = useCallback')
+    expect(
+      controllerSource.slice(loadStart, controllerSource.indexOf('}, [', loadStart))
+    ).toContain('resetReadiness()')
     const terminated = webViewSource.indexOf('const handleContentProcessDidTerminate')
     expect(terminated).toBeGreaterThanOrEqual(0)
     expect(webViewSource.slice(terminated, webViewSource.indexOf('}, [', terminated))).toContain(

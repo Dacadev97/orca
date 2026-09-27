@@ -239,6 +239,18 @@ export function useTerminalWebViewController(
     armWebReadyWatchdog()
   }, [armWebReadyWatchdog, pendingMessages, writeCoalescer])
 
+  const documentLoadedRef = useRef(false)
+  /** The WebView starts loading a document; only a reload replaces one that commands were queued for. */
+  const handleLoadStart = useCallback(() => {
+    // Why: a subscribe sized from the stored cell box queues init before the first load starts.
+    if (!documentLoadedRef.current) {
+      documentLoadedRef.current = true
+      armWebReadyWatchdog()
+      return
+    }
+    resetReadiness()
+  }, [armWebReadyWatchdog, resetReadiness])
+
   useEffect(() => {
     postMessage({ type: 'set-theme', terminalTheme })
   }, [postMessage, terminalThemeKey, terminalTheme])
@@ -346,6 +358,7 @@ export function useTerminalWebViewController(
     handle,
     receive,
     reportNativeEngineError,
-    resetReadiness
+    resetReadiness,
+    handleLoadStart
   }
 }

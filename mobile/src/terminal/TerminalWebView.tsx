@@ -26,7 +26,8 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
       handle,
       receive,
       reportNativeEngineError,
-      resetReadiness
+      resetReadiness,
+      handleLoadStart
     } = useTerminalWebViewController(props, {
       post,
       // iOS can preserve the native view while discarding its JS/backing-store state.
@@ -83,7 +84,7 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
           // Why: Android WebView defaults textZoom to the system font scale, inflating
           // xterm's DOM glyphs past its canvas-measured cell grid (#4579). iOS ignores it.
           textZoom={100}
-          onLoadStart={resetReadiness}
+          onLoadStart={handleLoadStart}
           onMessage={handleMessage}
           onError={(event) => reportNativeEngineError('Terminal WebView load failed', event)}
           onHttpError={(event) => reportNativeEngineError('Terminal WebView HTTP error', event)}

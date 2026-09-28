@@ -41,9 +41,6 @@ export function readTerminalCellMetrics(msg: Record<string, unknown>): TerminalC
 export function createTerminalCellBoxStore() {
   const cells = new Map<number, TerminalCellMetrics>()
   return {
-    get(fontScale: number): TerminalCellMetrics | undefined {
-      return cells.get(fontScale)
-    },
     /** The grid a laid-out frame holds at this text size; null until a box is known. */
     fit(fontScale: number, frame: { width: number; height: number }) {
       const cell = cells.get(fontScale)

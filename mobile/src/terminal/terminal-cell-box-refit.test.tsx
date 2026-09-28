@@ -26,6 +26,7 @@ function refitHarness(measured: TerminalViewportDims) {
       cols: Math.floor(frame.width / (23 / 3)),
       rows: 47
     })),
+    seedFitDimensions: vi.fn(),
     measureFitDimensions: vi.fn(async () => measured),
     resetZoom: vi.fn(),
     cancelSelect: vi.fn(),

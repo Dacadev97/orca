@@ -4,6 +4,7 @@ import { createTerminalCellBoxStore, readTerminalCellMetrics } from './terminal-
 // 23 device px at DPR 3: the WebGL renderer's 13px cell on the emulator.
 const CELL_1X = { fontScale: 1, cellWidth: 23 / 3, cellHeight: 15 }
 const CELL_125X = { fontScale: 1.25, cellWidth: 29 / 3, cellHeight: 19 }
+const FRAME = { width: 427, height: 710 }
 
 describe('readTerminalCellMetrics', () => {
   it('reads nothing from a notify without a cell box', () => {
@@ -24,9 +25,9 @@ describe('createTerminalCellBoxStore', () => {
     const store = createTerminalCellBoxStore()
     store.record(CELL_1X)
     store.record(CELL_125X)
-    expect(store.get(1)).toEqual(CELL_1X)
-    expect(store.get(1.25)).toEqual(CELL_125X)
-    expect(store.get(1.5)).toBeUndefined()
+    expect(store.fit(1, FRAME)).toEqual({ cols: 55, rows: 47 })
+    expect(store.fit(1.25, FRAME)).toEqual({ cols: 44, rows: 37 })
+    expect(store.fit(1.5, FRAME)).toBeNull()
   })
 
   it('says when a box replaced a different one, and only then', () => {
@@ -35,6 +36,6 @@ describe('createTerminalCellBoxStore', () => {
     expect(store.record(CELL_1X)).toBe(false)
     const domRenderer = { fontScale: 1, cellWidth: 7.8, cellHeight: 15 }
     expect(store.record(domRenderer)).toBe(true)
-    expect(store.get(1)).toEqual(domRenderer)
+    expect(store.fit(1, FRAME)).toEqual({ cols: 54, rows: 47 })
   })
 })

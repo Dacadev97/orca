@@ -71,6 +71,7 @@ function subscriptionHarness(opts: {
     resize: vi.fn(),
     reflow: vi.fn(),
     clear: vi.fn(),
+    fitDimensions: vi.fn(() => fit),
     seedFitDimensions: vi.fn(() => fit),
     measureFitDimensions: vi.fn(async () => fit ?? PHONE),
     resetZoom: vi.fn(),

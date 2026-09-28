@@ -14,9 +14,12 @@ export function useTerminalViewGeneration(
 
   const isCurrentView = useCallback((generation: number) => generation === currentRef.current, [])
 
-  /** The WebView starts loading a document; only a reload replaces one that commands were queued for. */
+  /**
+   * Only the first load start this controller ever sees keeps the queue: a subscribe sized from the
+   * stored cell box queues init before it. Every later one, a replacement view's first included,
+   * drops the queue and waits for a new ready; the hasInit resubscribe restores the init.
+   */
   const handleLoadStart = useCallback(() => {
-    // Why: a subscribe sized from the stored cell box queues init before the first load starts.
     if (!documentLoadedRef.current) {
       documentLoadedRef.current = true
       armWebReadyWatchdog()

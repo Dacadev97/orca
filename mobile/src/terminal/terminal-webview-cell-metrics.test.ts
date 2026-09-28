@@ -203,10 +203,14 @@ describe('the cell box xterm laid out', () => {
     handle().write('for the replaced view')
     act(() => webView().props.onContentProcessDidTerminate({ nativeEvent: {} }))
     notify({ type: 'web-ready', cellMetrics: [cellAt(scale)] })
-    act(() => vi.runAllTimers())
+    act(() => {
+      vi.runAllTimers()
+    })
     expect(postedTypes()).not.toContain('write')
     handle().write('for the current document')
-    act(() => vi.runAllTimers())
+    act(() => {
+      vi.runAllTimers()
+    })
     expect(postedTypes()).toContain('write')
   })
 

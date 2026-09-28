@@ -99,10 +99,11 @@ const HOST_COMPONENT_NAMES = new Set([
 // and the pane's `onCellBoxChange` goes to the viewport refit.
 const HEAD_MAIN_HOOK_SHA256 = '0a38ec291c341ffb5d26e745540e027da2a4b9ad4c77f8c00590d87df5a4842f'
 // Moved when the prompt-cancel flag became one structured-session host support object (main).
-// Re-recorded against the merged tree.
-const HEAD_HOOK_BINDING_SHA256 = 'e4bdde3f7b6ebeb15426fe4e8bb590e24975172b002d6b58c58b34ca98d2b699'
+// Re-recorded against the merged tree. Again when the frame-layout and cell-box-change callbacks
+// named the refs they read in their dependency lists (react-doctor).
+const HEAD_HOOK_BINDING_SHA256 = 'a634008a09e4e7130fac14f683e8c6410690286a2e7ba4e27b86ef800b272bd9'
 const HEAD_CALLBACK_IDENTITY_SHA256 =
-  'f68925c358c4c077dbef769533832a1d108501de851c6d9d2ba72788e2606f38'
+  '19201fe156b3fd9d1bd55418c2c54e2d2319c652bfe55732b26f331c458f56c9'
 // Pins that no callback body in the route changed unnoticed. Body text, not behaviour: the sends
 // and repo reads inside them now name their `RpcOperation` instead of the raw `sendRequest` port.
 // Refreshed in step 6 for the gesture flush, whose `terminal.send` became `terminalInputSend` and
@@ -123,7 +124,7 @@ const HEAD_CALLBACK_IDENTITY_SHA256 =
 // Refreshed once more for the two dictation failure handlers, which now both call
 // `reportDictationFailure` instead of each choosing between the setup sheet and a toast.
 // Refreshed when web-ready began resubscribing any document that lacks the subscription's init.
-const HEAD_CALLBACK_BODY_SHA256 = '6885588744bd42b3729bae62654da8c862238d80860151f59753d91ad9729d36'
+const HEAD_CALLBACK_BODY_SHA256 = '63be5ee0ce52d1d04bdaa05deffbe374787797bd687c2bf5354df6c85356e30b'
 // Refreshed for the startup effect: both `worktree.activate` sends became `worktreeActivate`, and
 // the sleeping-agent check reads that operation's verdict instead of the reply envelope. Refreshed
 // again when the reporter took the reply and interpreted it itself, retiring the hand-built

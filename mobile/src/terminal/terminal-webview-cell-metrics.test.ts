@@ -158,6 +158,14 @@ describe('the cell box xterm laid out', () => {
     await expect(pending).resolves.toEqual({ cols: 55, rows: 47 })
   })
 
+  it('does not measure before the frame is laid out: the fit waits for layout', async () => {
+    const { handle, notify } = mount()
+    notify({ type: 'web-ready', cellMetrics: [cellAt(scale)] })
+    await expect(handle().measureFitDimensions(710, 0)).resolves.toBeNull()
+    await expect(handle().measureFitDimensions(0, 427)).resolves.toBeNull()
+    expect(postedTypes()).not.toContain('measure')
+  })
+
   it('keeps an init queued before the first document loads, as a subscribe from the store does', () => {
     const { handle, notify, webView } = mount()
     handle().init(55, 47, 'snapshot')

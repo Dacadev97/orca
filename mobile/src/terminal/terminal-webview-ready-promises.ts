@@ -68,8 +68,8 @@ export function createTerminalWebViewReadyPromises() {
 
   function measure(
     send: (command: TerminalWebViewCommand) => void,
-    containerHeight?: number,
-    containerWidth?: number
+    containerHeight: number,
+    containerWidth: number
   ): Promise<TerminalFitDimensions | null> {
     return new Promise((resolve) => {
       measureResolve?.(null)

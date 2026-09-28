@@ -77,7 +77,7 @@ export function useMobileSessionTerminalWebview(scope: MobileSessionTabSwitching
     if (handle && !terminalUnsubsRef.current.has(handle)) {
       subscribeToTerminal(handle)
     }
-  }, [subscribeToTerminal])
+  }, [activeHandleRef, pendingActiveTerminalHandleRef, subscribeToTerminal, terminalUnsubsRef])
 
   useEffect(() => {
     if (activeSessionTab?.type !== 'markdown') {

@@ -162,13 +162,15 @@ export function handleMsg(scope: TerminalDocumentScope, msg: TerminalHostMessage
       cancelSelect(scope)
     }
   } else if (msg.type === 'measure') {
-    const height =
-      typeof msg.containerHeight === 'number' && msg.containerHeight > 0
-        ? msg.containerHeight
-        : scope.viewportRect().height
     const width = typeof msg.containerWidth === 'number' ? msg.containerWidth : 0
-    scope.hostFrame = width > 0 ? { width, height } : null
-    measureFitDimensions(scope, { width, height })
+    const height = typeof msg.containerHeight === 'number' ? msg.containerHeight : 0
+    // Why: the frame React Native laid out is the only box a fit reads; without it there is none.
+    if (width > 0 && height > 0) {
+      scope.hostFrame = { width, height }
+      measureFitDimensions(scope, { width, height })
+    } else {
+      notify(scope, { type: 'measure-result', cols: null, rows: null })
+    }
   } else if (msg.type === 'reset-zoom') {
     applyFitScale(scope, 'reset-zoom-msg')
   } else if (msg.type === 'set-theme') {

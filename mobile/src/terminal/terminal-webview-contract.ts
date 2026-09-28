@@ -100,8 +100,8 @@ export type TerminalWebViewHandle = {
   fitDimensions: (frame: { width: number; height: number }) => { cols: number; rows: number } | null
   // Why: the frame box React Native laid out; the document fits it with the app's own formula.
   measureFitDimensions: (
-    containerHeight?: number,
-    containerWidth?: number
+    frameHeight: number,
+    frameWidth: number
   ) => Promise<{ cols: number; rows: number } | null>
   resetZoom: () => void
   cancelSelect: () => void

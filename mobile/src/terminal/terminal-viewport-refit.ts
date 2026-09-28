@@ -5,6 +5,7 @@ import type { ConnectionState } from '../transport/types'
 import type { TerminalWebViewHandle } from './TerminalWebView'
 import { shouldRecoverTerminalOnAppStateChange } from './terminal-foreground-recovery'
 import { terminalViewportUpdate } from './mobile-terminal-operations'
+import { useFrameWidthRefit } from './terminal-frame-width-refit'
 import {
   isTerminalViewportRefitTargetCurrent,
   reduceTerminalFrameHeightRefit,
@@ -65,9 +66,9 @@ export function useTerminalViewportRefit(
     subscribeToTerminal
   } = options
 
-  // Why: the measure fits the frame width React Native laid out, the one the first subscribe used.
+  // Why: the frame width React Native laid out, the one the first subscribe fitted; written by the
+  // width effect below, read by the measure.
   const frameWidthRef = useRef(terminalFrameWidth)
-  frameWidthRef.current = terminalFrameWidth
   const refitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const refitRunSeqRef = useRef(0)
   const forceNextRefitRef = useRef(false)
@@ -126,7 +127,7 @@ export function useTerminalViewportRefit(
           })
         void (async () => {
           const dims = await ref.measureFitDimensions(
-            terminalFrameHeightRef.current || undefined,
+            terminalFrameHeightRef.current,
             frameWidthRef.current
           )
           if (!isCurrentTarget()) {
@@ -237,16 +238,16 @@ export function useTerminalViewportRefit(
     scheduleViewportRefit()
   }, [textScale, viewportMeasuredRef, scheduleViewportRefit])
 
-  // Why: panel dock/undock or sidebar resize changes frame width with no window/tab change, so the cached viewport goes stale.
-  const prevFrameWidthRef = useRef(terminalFrameWidth)
-  useEffect(() => {
-    if (prevFrameWidthRef.current === terminalFrameWidth) {
-      return
-    }
-    prevFrameWidthRef.current = terminalFrameWidth
-    viewportMeasuredRef.current = false
-    scheduleViewportRefit()
-  }, [terminalFrameWidth, viewportMeasuredRef, scheduleViewportRefit])
+  useFrameWidthRefit({
+    terminalFrameWidth,
+    frameWidthRef,
+    activeHandleRef,
+    terminalRefs,
+    terminalFrameHeightRef,
+    viewportRef,
+    viewportMeasuredRef,
+    scheduleViewportRefit
+  })
 
   const notifyFrameHeightRefitEvent = useCallback(
     (event: TerminalFrameHeightRefitEvent) => {
@@ -279,7 +280,7 @@ export function useTerminalViewportRefit(
       viewportMeasuredRef.current = false
       scheduleViewportRefit()
     },
-    [viewportMeasuredRef, scheduleViewportRefit]
+    [activeHandleRef, viewportMeasuredRef, scheduleViewportRefit]
   )
 
   useEffect(() => {

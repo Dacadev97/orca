@@ -480,6 +480,14 @@ describeRender(
           })
           await openProbeTerminal(page)
           expect(documentChunk, 'the document was served as its own chunk').not.toBe(null)
+          // Ready is notified with the replay's fit still a frame away. Left pending, that fit
+          // commits the resized box below, the resize refit then has nothing to do, and there is no
+          // frame to hold; so the document settles first. Since the terminal is built before
+          // ready, the fixture returns fast enough to land inside that frame.
+          await page.evaluate(
+            () =>
+              new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+          )
 
           await page.evaluate((chunk) => {
             const state = globalThis.__orcaScheduler
@@ -632,8 +640,9 @@ describeRender(
       await openProbeTerminal(page)
 
       // The handle's own round trip: a measure is a command in and a notify back, and on the page
-      // both halves are direct calls rather than a bridge. Null would mean the document answered
-      // nothing, or answered a grid too small to fit.
+      // both halves are direct calls rather than a bridge. It carries the frame React Native laid
+      // out, as the session's does. Null would mean the document answered nothing, or answered a
+      // grid too small to fit.
       const fit = await page.evaluate(() => globalThis.__orcaTerminalProbe.measure())
       expect(fit).not.toBeNull()
       expect(fit.cols).toBeGreaterThanOrEqual(20)

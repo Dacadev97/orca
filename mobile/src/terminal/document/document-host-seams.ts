@@ -127,7 +127,10 @@ declare global {
      * quotes it. The document reaches it through a seam, so a page's mount holds its own instead.
      */
     __engineErrors?: string[]
-    /** The app's text scale, which the native component injects before the document script runs. */
+    /**
+     * The WebView page writes these ahead of the document script: the text scale its view mounted
+     * at, and whether that view was shown then.
+     */
     __orcaTerminalTextScale?: unknown
     __orcaTerminalShown?: unknown
   }

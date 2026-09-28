@@ -178,8 +178,8 @@ export type MutableRef<T> = { current: T }
 type TerminalFitWebView = {
   awaitReady: () => Promise<unknown>
   measureFitDimensions: (
-    frameHeight?: number,
-    frameWidth?: number
+    frameHeight: number,
+    frameWidth: number
   ) => Promise<TerminalViewportDims | null | undefined>
 }
 
@@ -250,7 +250,7 @@ export function runTerminalViewportFitPass(args: TerminalViewportFitPassArgs): v
     const dims = await args
       .getTerminalRef(handle)
       ?.measureFitDimensions(
-        args.terminalFrameHeightRef.current || undefined,
+        args.terminalFrameHeightRef.current,
         args.terminalFrameWidthRef.current
       )
     // Why: re-check seq — the awaits may have let a newer subscribe cycle arm; tearing it down would resubscribe a stale generation.

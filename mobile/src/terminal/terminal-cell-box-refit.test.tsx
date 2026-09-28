@@ -21,7 +21,11 @@ function refitHarness(measured: TerminalViewportDims) {
     resize: vi.fn(),
     reflow: vi.fn(),
     clear: vi.fn(),
-    fitDimensions: vi.fn(() => null),
+    // The stored box: 23/3 px cells, 47 rows.
+    fitDimensions: vi.fn((frame: { width: number }) => ({
+      cols: Math.floor(frame.width / (23 / 3)),
+      rows: 47
+    })),
     measureFitDimensions: vi.fn(async () => measured),
     resetZoom: vi.fn(),
     cancelSelect: vi.fn(),
@@ -32,7 +36,7 @@ function refitHarness(measured: TerminalViewportDims) {
   const subscribeToTerminal = vi.fn()
   const unsubscribeTerminal = vi.fn()
   let notify: ((handle: string) => void) | undefined
-  function Probe() {
+  function Probe({ frameWidth }: { frameWidth: number }) {
     notify = useTerminalViewportRefit({
       activeHandleRef: { current: HANDLE },
       terminalRefs: { current: new Map([[HANDLE, terminal]]) },
@@ -46,20 +50,22 @@ function refitHarness(measured: TerminalViewportDims) {
       connState: 'connected',
       tabStripVisible: false,
       textScale: 1,
-      terminalFrameWidth: 427,
+      terminalFrameWidth: frameWidth,
       unsubscribeTerminal,
       subscribeToTerminal
     }).notifyTerminalCellBoxChange
     return null
   }
   act(() => {
-    renderer = create(createElement(Probe))
+    renderer = create(createElement(Probe, { frameWidth: 427 }))
   })
   return {
     terminal,
     viewportRef,
     subscribeToTerminal,
-    report: (handle: string) => act(() => notify!(handle))
+    report: (handle: string) => act(() => notify!(handle)),
+    layOut: (frameWidth: number) =>
+      act(() => renderer!.update(createElement(Probe, { frameWidth })))
   }
 }
 
@@ -92,5 +98,24 @@ describe('a new cell box for the open terminal', () => {
       await vi.advanceTimersByTimeAsync(150)
     })
     expect(harness.terminal.measureFitDimensions).not.toHaveBeenCalled()
+  })
+
+  it('leaves the PTY alone when a new frame width holds the same grid, as sub-pixel jitter does', async () => {
+    const harness = refitHarness({ cols: 55, rows: 47 })
+    harness.layOut(427.3)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(150)
+    })
+    expect(harness.terminal.measureFitDimensions).not.toHaveBeenCalled()
+  })
+
+  it('refits when a new frame width holds a different grid', async () => {
+    const harness = refitHarness({ cols: 54, rows: 47 })
+    harness.layOut(420)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(150)
+    })
+    expect(harness.terminal.measureFitDimensions).toHaveBeenCalledWith(710, 420)
+    expect(harness.viewportRef.current).toEqual({ cols: 54, rows: 47 })
   })
 })

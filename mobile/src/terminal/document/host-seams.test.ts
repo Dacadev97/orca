@@ -206,9 +206,10 @@ describe('the document host seams, by default', () => {
 })
 
 describe('the document host seams, once the page sets them', () => {
-  it('fits a measure with no container height to the host rather than the window', () => {
+  it('answers no fit for a measure without the frame, rather than one read off the host', () => {
     // The page's host is one element on a page that is taller and wider than it; the window is
-    // happy-dom's 1024x768, so a fit read off the window would answer 136x51.
+    // happy-dom's 1024x768. Neither is the frame React Native laid out, so a measure that does not
+    // carry both of the frame's dimensions has nothing to fit.
     const cell = { width: 7.5, height: 15 }
     const terminal = Object.assign(terminalDouble(), {
       _core: { _renderService: { dimensions: { css: { cell } } } }
@@ -221,7 +222,11 @@ describe('the document host seams, once the page sets them', () => {
     })
     handleMsg(scope, { type: 'init', cols: 80, rows: 24, initialData: '', preserveScroll: false })
     handleMsg(scope, { type: 'measure', containerWidth: 390 })
+    handleMsg(scope, { type: 'measure', containerHeight: 600 })
+    handleMsg(scope, { type: 'measure', containerWidth: 390, containerHeight: 600 })
     expect(posted.filter((message) => message.type === 'measure-result')).toEqual([
+      { type: 'measure-result', cols: null, rows: null },
+      { type: 'measure-result', cols: null, rows: null },
       { type: 'measure-result', cols: 52, rows: 40 }
     ])
   })

@@ -71,7 +71,8 @@ export type TerminalWebViewProps = {
   // Why: baseline zoom multiplier applied on top of fit-to-width scale; raw
   // xterm fontSize alone cannot drive apparent size because fitting cancels it.
   textScale?: number
-  onWebReady?: () => void
+  /** `hasInit`: this document holds the latest init the terminal was given (none given: false). */
+  onWebReady?: (document: { hasInit: boolean }) => void
   onEngineError?: (message: string) => void
 } & TerminalSelectionEvents
 
@@ -95,7 +96,11 @@ export type TerminalWebViewHandle = {
   clear: () => void
   /** The fit for this frame from the cell box xterm laid out at the current text size; null until one is known. */
   fitDimensions: (frame: { width: number; height: number }) => { cols: number; rows: number } | null
-  measureFitDimensions: (containerHeight?: number) => Promise<{ cols: number; rows: number } | null>
+  // Why: the frame box React Native laid out; the document fits it with the app's own formula.
+  measureFitDimensions: (
+    containerHeight?: number,
+    containerWidth?: number
+  ) => Promise<{ cols: number; rows: number } | null>
   resetZoom: () => void
   cancelSelect: () => void
   doSelectAll: () => void

@@ -64,11 +64,14 @@ function openTerminal(scope: TerminalDocumentScope, cols: number, rows: number) 
  * lays out at the app's text scale. Any size will do: the first init resizes and reuses it.
  */
 export function prepareTerminal(scope: TerminalDocumentScope) {
+  // Why: laid out for the measure, but not shown — an empty 80x24 grid and caret until init.
+  scope.surface!.style.visibility = 'hidden'
   try {
     scope.committedTerm = openTerminal(scope, 80, 24)
     scope.provisionalTerm = scope.committedTerm
   } catch {
     // Why: init builds again and reports the failure through the path every init failure takes.
+    scope.surface!.style.visibility = ''
     scope.term = null
   }
 }
@@ -172,6 +175,9 @@ export function init(
       }
       if (surfaceSwap) {
         commitTerminalSurfaceSwap(scope, surfaceSwap, nextTerm)
+      } else {
+        // The terminal built before ready, shown now that it holds the replay.
+        scope.surface!.style.visibility = ''
       }
       // Why: restore the reader's place after the rewrapped buffer replays.
       // Replay lands at bottom, so only act when they were scrolled up (rows>0).

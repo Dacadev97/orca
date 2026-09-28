@@ -200,12 +200,13 @@ export function MobileSessionActiveContent({
       key="terminal-frame"
       style={styles.terminalFrame}
       onLayout={(e) => {
-        terminalFrameHeightRef.current = e.nativeEvent.layout.height
-        terminalFrameWidthRef.current = e.nativeEvent.layout.width
+        // Why: one unrounded width for every fit — the first subscribe's and each refit's.
+        const { width, height } = e.nativeEvent.layout
+        terminalFrameHeightRef.current = height
+        terminalFrameWidthRef.current = width
         // Why: notify height imperatively so dock settling re-fits the PTY without rerendering SessionScreen.
-        const nextWidth = Math.round(e.nativeEvent.layout.width)
-        const nextHeight = Math.round(e.nativeEvent.layout.height)
-        setTerminalFrameWidth((prev) => (prev === nextWidth ? prev : nextWidth))
+        const nextHeight = Math.round(height)
+        setTerminalFrameWidth((prev) => (prev === width ? prev : width))
         notifyTerminalFrameHeight(nextHeight)
         handleTerminalFrameLayout()
       }}

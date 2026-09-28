@@ -18,12 +18,15 @@ import { TERMINAL_DOCUMENT_MARKUP } from './terminal-webview-html'
  */
 /** Set for the length of one case; the factory throws it instead of building a document. */
 let startThrows: Error | null = null
+/** The text scale each document the factory built was started at, in order. */
+const startedScales: number[] = []
 
 vi.mock('./document/create-terminal-document', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./document/create-terminal-document')>()
   return {
     ...actual,
     createTerminalDocument: (host: Parameters<typeof actual.createTerminalDocument>[0]) => {
+      startedScales.push(host?.initialTextScale?.() ?? 1)
       if (startThrows) {
         throw startThrows
       }
@@ -64,6 +67,7 @@ let renderer: ReactTestRenderer | null = null
 
 beforeEach(() => {
   startThrows = null
+  startedScales.length = 0
   document.body.innerHTML = ''
   document.head.innerHTML = ''
 })
@@ -242,5 +246,23 @@ describe('the component names the cause of a start that threw', () => {
     })
 
     expect(engineErrors).toEqual([])
+  })
+})
+
+describe('the text scale a document is built at', () => {
+  it('is the one the view mounted with, for a reloaded document too, as on native', () => {
+    const host = plantHost()
+    startThrows = new Error('engine missing')
+    act(() => {
+      renderer = create(createElement(TerminalWebView, { textScale: 1.25 }), {
+        createNodeMock: () => host
+      })
+    })
+    act(() => renderer?.update(createElement(TerminalWebView, { textScale: 1.5 })))
+    startThrows = null
+    act(() => {
+      renderer?.root.find((node) => node.props.accessibilityRole === 'button').props.onPress()
+    })
+    expect(startedScales).toEqual([1.25, 1.25])
   })
 })

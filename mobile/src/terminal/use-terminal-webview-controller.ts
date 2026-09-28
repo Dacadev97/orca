@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import type { TerminalOscLinkRange } from '../../../src/shared/terminal-osc-link-ranges'
-import {
-  fitDimensionsFromCell,
-  readTerminalCellMetrics,
-  terminalCellBoxes
-} from './terminal-cell-metrics'
+import { readTerminalCellMetrics, terminalCellBoxes } from './terminal-cell-metrics'
+import { createDocumentInitTracker } from './terminal-document-init-tracker'
+import { fitDimensionsFromCell } from './terminal-grid-fit'
 import type { TerminalWebViewHandle, TerminalWebViewProps } from './terminal-webview-contract'
 import { useTerminalWebViewEngineErrorState } from './terminal-webview-engine-error-state'
 import { useTerminalWebReadyWatchdog } from './terminal-webview-ready-watchdog'
@@ -82,6 +80,9 @@ export function useTerminalWebViewController(
   // Why: a box that changes while the grid does not is a renderer or pixel-ratio change and needs a
   // refit; one that arrives with a new grid is that grid's own (the DOM renderer's width follows cols).
   const lastReportedGridRef = useRef<string | null>(null)
+  // Why: the grid a subscribe fitted from the stored box; a new document's first report is compared
+  // against it, so a stale stored box is caught even when web-ready carried none.
+  const fittedGridRef = useRef<string | null>(null)
   const { clearEngineError, engineError, reportEngineError, reportNativeEngineError } =
     useTerminalWebViewEngineErrorState(onEngineError)
   const { armWebReadyWatchdog, clearWebReadyWatchdog } = useTerminalWebReadyWatchdog(
@@ -89,14 +90,17 @@ export function useTerminalWebViewController(
     reportEngineError
   )
 
+  const initTracker = useMemo(() => createDocumentInitTracker(), [])
+
   const sendToDocument = useCallback(
     (msg: TerminalWebViewCommand) => {
+      initTracker.delivered(msg)
       messageIdRef.current += 1
       const id = messageIdRef.current
       post({ ...msg, id })
       return id
     },
-    [post]
+    [initTracker, post]
   )
 
   const flushPendingMessages = useCallback(() => {
@@ -134,7 +138,7 @@ export function useTerminalWebViewController(
       clearWebReadyWatchdog()
       clearEngineError()
       if (notifyParent) {
-        onWebReady?.()
+        onWebReady?.({ hasInit: initTracker.readyDocumentHasInit(pendingMessages.holds('init')) })
       }
       // Why: reload clears queued commands, so readiness must always restore the
       // native-selected theme even when its value did not change in React.
@@ -145,7 +149,9 @@ export function useTerminalWebViewController(
       clearEngineError,
       clearWebReadyWatchdog,
       flushPendingMessages,
+      initTracker,
       onWebReady,
+      pendingMessages,
       sendToDocument,
       terminalTheme
     ]
@@ -157,11 +163,12 @@ export function useTerminalWebViewController(
       routeTerminalQueryReply(msg, onTerminalQueryReply)
 
       if (msg.type === 'web-ready') {
+        initTracker.documentReady()
         // Why: an open that subscribed before ready used the stored box; a different one here refits it.
         const changed = readTerminalCellMetrics(msg).some(
           (entry) => terminalCellBoxes.record(entry) && entry.fontScale === textScale
         )
-        lastReportedGridRef.current = null
+        lastReportedGridRef.current = fittedGridRef.current
         confirmWebReady(true)
         if (changed) {
           onCellBoxChange?.()
@@ -315,15 +322,18 @@ export function useTerminalWebViewController(
       },
       fitDimensions(frame: { width: number; height: number }) {
         const cell = terminalCellBoxes.get(textScale)
-        return cell && frame.width > 0 && frame.height > 0
-          ? fitDimensionsFromCell(cell, frame.width, frame.height)
-          : null
+        const fit =
+          cell && frame.width > 0 && frame.height > 0
+            ? fitDimensionsFromCell(cell, frame.width, frame.height)
+            : null
+        fittedGridRef.current = fit ? `${fit.cols}x${fit.rows}` : null
+        return fit
       },
-      measureFitDimensions(containerHeight?: number) {
+      measureFitDimensions(containerHeight?: number, containerWidth?: number) {
         if (!isWebReadyRef.current) {
           return Promise.resolve(null)
         }
-        return promises.measure(sendToDocument, containerHeight)
+        return promises.measure(sendToDocument, containerHeight, containerWidth)
       },
       resetZoom() {
         postMessage({ type: 'reset-zoom' })

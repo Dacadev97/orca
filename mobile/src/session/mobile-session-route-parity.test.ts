@@ -122,7 +122,8 @@ const HEAD_CALLBACK_IDENTITY_SHA256 =
 // the other's body. The hook and string counts are C7.2's and stand.
 // Refreshed once more for the two dictation failure handlers, which now both call
 // `reportDictationFailure` instead of each choosing between the setup sheet and a toast.
-const HEAD_CALLBACK_BODY_SHA256 = 'e047d7b4ce527bf88b8c95232f47abe290eefc32418339926538ec39fc5462ef'
+// Refreshed when web-ready began resubscribing any document that lacks the subscription's init.
+const HEAD_CALLBACK_BODY_SHA256 = '6885588744bd42b3729bae62654da8c862238d80860151f59753d91ad9729d36'
 // Refreshed for the startup effect: both `worktree.activate` sends became `worktreeActivate`, and
 // the sleeping-agent check reads that operation's verdict instead of the reply envelope. Refreshed
 // again when the reporter took the reply and interpreted it itself, retiring the hand-built
@@ -184,7 +185,8 @@ const HEAD_TIMER_CLEANUP_SHA256 = 'c73f1d1c2cc89642f3d727d6f3b6b81860a9d6f342345
 const HEAD_RUNTIME_STRING_SHA256 =
   '0a5fc85705f0dbb7e84fd1b22d97f344b2258432d3f7bd79c74644d721f97529'
 // Moved by both of the dock's fields: their refs, and the live one's submit handler, are the seam's now.
-const HEAD_HOST_JSX_SHA256 = '65930500dddae62faf938360d938180e436fc3c79d2d1b8b45e5fc2cb921e8c4'
+// Moved again when the terminal frame kept its laid-out width unrounded, for every fit.
+const HEAD_HOST_JSX_SHA256 = '648765319d0351245b4748677983e3b7908423a70f37d2fd772489c7164c8b86'
 const HEAD_LEAF_JSX_SHA256 = '62eb05c6e2ac0be6d553a141fc8aa1641fcb0c678777d5d539f490aab8648417'
 const HEAD_STYLE_REFERENCE_SHA256 =
   '295a3501c2c6d7bea7c8bbf38b3f3534f01344cd7e1b91bb8e07c040821d596a'

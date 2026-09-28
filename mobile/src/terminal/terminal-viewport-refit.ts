@@ -31,7 +31,7 @@ type TerminalViewportRefitOptions = {
   tabStripVisible: boolean
   // Why: text size (font scale); changing it changes cell size, so the PTY must be re-fitted to a new column count.
   textScale: number
-  // Why: measured frame width; panel dock/undock or sidebar resize changes it with no window/tab change, so it re-fits the PTY.
+  // Why: measured frame width, unrounded; panel dock/undock or sidebar resize changes it with no window/tab change, so it re-fits the PTY.
   terminalFrameWidth: number
   unsubscribeTerminal: (handle: string) => void
   subscribeToTerminal: (handle: string) => void
@@ -65,6 +65,9 @@ export function useTerminalViewportRefit(
     subscribeToTerminal
   } = options
 
+  // Why: the measure fits the frame width React Native laid out, the one the first subscribe used.
+  const frameWidthRef = useRef(terminalFrameWidth)
+  frameWidthRef.current = terminalFrameWidth
   const refitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const refitRunSeqRef = useRef(0)
   const forceNextRefitRef = useRef(false)
@@ -122,7 +125,10 @@ export function useTerminalViewportRefit(
             currentRunSeq: refitRunSeqRef.current
           })
         void (async () => {
-          const dims = await ref.measureFitDimensions(terminalFrameHeightRef.current || undefined)
+          const dims = await ref.measureFitDimensions(
+            terminalFrameHeightRef.current || undefined,
+            frameWidthRef.current
+          )
           if (!isCurrentTarget()) {
             return
           }

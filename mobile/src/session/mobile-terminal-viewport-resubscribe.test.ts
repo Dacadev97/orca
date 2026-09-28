@@ -276,6 +276,7 @@ describe('runTerminalViewportFitPass', () => {
       initializedHandlesRef: { current: new Set([HANDLE]) },
       terminalUnsubsRef,
       terminalFrameHeightRef: { current: 0 },
+      terminalFrameWidthRef: { current: 0 },
       getTerminalRef: () => webView,
       unsubscribeTerminal,
       subscribeToTerminal,

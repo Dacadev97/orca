@@ -7,6 +7,8 @@ import { MobileTerminalDiagnostics } from './mobile-terminal-diagnostics'
 import { TerminalViewportResubscribeBudget } from './mobile-terminal-viewport-resubscribe'
 import type { MobileSessionTerminalSubscriptionFoundationModel } from './use-mobile-session-terminal-subscription-foundation'
 import { useMobileSessionTerminalSubscription } from './use-mobile-session-terminal-subscription'
+import type { MobileSessionTabSwitchingModel } from './use-mobile-session-tab-switching'
+import { useMobileSessionTerminalWebview } from './use-mobile-session-terminal-webview'
 
 const HANDLE = 'term-1'
 const PHONE = { cols: 55, rows: 44 }
@@ -120,13 +122,29 @@ function subscriptionHarness(opts: {
       subscribeSeqRef.current.set(handle, (subscribeSeqRef.current.get(handle) ?? 0) + 1)
     },
     unsubscribeTerminalRef: { current: vi.fn() },
-    signalTerminalInventoryRecovery: vi.fn()
+    signalTerminalInventoryRecovery: vi.fn(),
+    terminalRefs: { current: new Map([[HANDLE, terminal]]) },
+    pendingActiveTerminalHandleRef: { current: null },
+    nativeChatStream: { notifyWebReady: vi.fn() },
+    terminalGestureInputBucketsRef: { current: new Map() },
+    terminalGestureInputQueuesRef: { current: new Map() },
+    terminalGestureInputInFlightRef: { current: new Set() },
+    activeSessionTab: null,
+    markdownDocs: new Map(),
+    fileDocs: new Map(),
+    readMarkdownTab: vi.fn(),
+    readFileTab: vi.fn()
   }
   let subscribe: ((handle: string) => void) | undefined
+  let webReady: ((handle: string, documentHasInit: boolean) => void) | undefined
   function Probe() {
     // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the hook destructures only the fields built above.
     const scope = fields as unknown as MobileSessionTerminalSubscriptionFoundationModel
     subscribe = useMobileSessionTerminalSubscription(scope).subscribeToTerminal
+    const withSubscribe = { ...fields, subscribeToTerminal: subscribe }
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the web-ready handler reads only the fields built above.
+    const webviewScope = withSubscribe as unknown as MobileSessionTabSwitchingModel
+    webReady = useMobileSessionTerminalWebview(webviewScope).handleTerminalWebReady
     return null
   }
   act(() => {
@@ -145,6 +163,10 @@ function subscriptionHarness(opts: {
     reportReady: (next: typeof PHONE) => {
       fit = next
       webReadyHandlesRef.current.add(HANDLE)
+    },
+    // The document's web-ready, saying whether it holds the init the subscription gave the terminal.
+    documentReady: (hasInit: boolean) => {
+      act(() => webReady!(HANDLE, hasInit))
     },
     layOutFrame: (width: number) => {
       terminalFrameWidthRef.current = width
@@ -180,6 +202,32 @@ describe('a terminal first subscribe', () => {
     await act(async () => {})
     expect(harness.order).toEqual(['subscribe {"cols":55,"rows":44}', 'init 55x44'])
     expect(harness.terminal.measureFitDimensions).not.toHaveBeenCalled()
+  })
+
+  it('re-inits a document that lost the queued init to a reload before its first ready', async () => {
+    const harness = subscriptionHarness({ fit: PHONE, webReady: false })
+    harness.subscribe()
+    harness.scrollback(0, PHONE.cols, PHONE.rows)
+    await act(async () => {})
+    harness.documentReady(false)
+    harness.scrollback(1, PHONE.cols, PHONE.rows)
+    await act(async () => {})
+    expect(harness.order).toEqual([
+      'subscribe {"cols":55,"rows":44}',
+      'init 55x44',
+      'subscribe {"cols":55,"rows":44}',
+      'init 55x44'
+    ])
+  })
+
+  it('leaves a document that holds its queued init alone at its first ready', async () => {
+    const harness = subscriptionHarness({ fit: PHONE, webReady: false })
+    harness.subscribe()
+    harness.scrollback(0, PHONE.cols, PHONE.rows)
+    await act(async () => {})
+    harness.documentReady(true)
+    await act(async () => {})
+    expect(harness.order).toEqual(['subscribe {"cols":55,"rows":44}', 'init 55x44'])
   })
 
   it('holds a ready document without a box until its frame is laid out', () => {

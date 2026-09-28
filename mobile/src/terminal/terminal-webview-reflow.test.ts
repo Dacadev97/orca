@@ -54,9 +54,13 @@ describe('terminal WebView reflow', () => {
   })
 
   it('does not locally resize hidden WebViews to a one-column grid', () => {
-    // The floor is a constant of the module that fits the grid, and both readers import it.
-    expect(DOCUMENT_SOURCE).toContain('export const MIN_FIT_COLS = 20')
-    expect(DOCUMENT_SOURCE).toContain('if (cols < MIN_FIT_COLS) {')
+    // The floor belongs to the one fit the app and the document share; both of the document's
+    // fits go through it and stop on its null.
+    const gridFitSource = readFileSync(new URL('./terminal-grid-fit.ts', import.meta.url), 'utf8')
+    expect(gridFitSource).toContain('export const MIN_FIT_COLS = 20')
+    expect(gridFitSource).toContain('if (!(cols >= MIN_FIT_COLS)) {')
+    expect(documentModuleSource('host-message-router')).toContain('fitDimensionsFromCell(')
+    expect(documentModuleSource('text-scaling')).toContain('fitDimensionsFromCell(')
     expect(DOCUMENT_SOURCE).toContain("flog(scope, 'measure-skip-small-width'")
     expect(DOCUMENT_SOURCE).toContain(
       "notify(scope, { type: 'measure-result', cols: null, rows: null })"

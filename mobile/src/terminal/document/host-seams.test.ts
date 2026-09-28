@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { fitDimensionsFromCell } from '../terminal-grid-fit'
 import { createTerminalDocumentScope, type TerminalDocumentScope } from './document-scope'
 import { startTerminalDocument, stopTerminalDocument } from './create-terminal-document'
 import { handleMsg } from './host-message-router'
@@ -219,9 +220,36 @@ describe('the document host seams, once the page sets them', () => {
       viewportRect: () => ({ left: 0, top: 82, width: 390, height: 600 })
     })
     handleMsg(scope, { type: 'init', cols: 80, rows: 24, initialData: '', preserveScroll: false })
-    handleMsg(scope, { type: 'measure' })
+    handleMsg(scope, { type: 'measure', containerWidth: 390 })
     expect(posted.filter((message) => message.type === 'measure-result')).toEqual([
       { type: 'measure-result', cols: 52, rows: 40 }
+    ])
+  })
+
+  it('fits the frame width React Native laid out, not the viewport CSS rounded, as the app does', () => {
+    // 1080 device px at a 2.75 pixel ratio: React Native lays the frame out at 392.73, the
+    // document's viewport reads 393, and a cell of 393/51 sits between the two.
+    const frameWidth = 1080 / 2.75
+    const cell = { width: 393 / 51, height: 15 }
+    const terminal = Object.assign(terminalDouble(), {
+      _core: { _renderService: { dimensions: { css: { cell } } } }
+    })
+    const posted: Record<string, unknown>[] = []
+    const scope = startedScope({
+      createTerminal: () => terminal,
+      postToHost: (message) => posted.push(message),
+      viewportRect: () => ({ left: 0, top: 0, width: 393, height: 600 })
+    })
+    handleMsg(scope, { type: 'init', cols: 80, rows: 24, initialData: '', preserveScroll: false })
+    handleMsg(scope, { type: 'measure', containerWidth: frameWidth, containerHeight: 600 })
+    const appFit = fitDimensionsFromCell(
+      { cellWidth: cell.width, cellHeight: cell.height },
+      frameWidth,
+      600
+    )
+    expect(appFit).toEqual({ cols: 50, rows: 40 })
+    expect(posted.filter((message) => message.type === 'measure-result')).toEqual([
+      { type: 'measure-result', ...appFit }
     ])
   })
 

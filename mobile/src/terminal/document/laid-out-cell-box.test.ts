@@ -157,6 +157,18 @@ describe('a started document', () => {
     }
   })
 
+  it('keeps the terminal built before ready out of sight until the first init has replayed', async () => {
+    const { scope, posted, init } = started()
+    try {
+      expect(scope.surface?.style.visibility).toBe('hidden')
+      init()
+      await untilReady(posted)
+      expect(scope.surface?.style.visibility).toBe('')
+    } finally {
+      stopTerminalDocument(scope)
+    }
+  })
+
   it('reports a paused renderer at ready, before ready itself', async () => {
     const { scope, posted, init } = started()
     try {

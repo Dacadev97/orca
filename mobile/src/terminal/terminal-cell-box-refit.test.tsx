@@ -80,7 +80,7 @@ describe('a new cell box for the open terminal', () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(150)
     })
-    expect(harness.terminal.measureFitDimensions).toHaveBeenCalledWith(710)
+    expect(harness.terminal.measureFitDimensions).toHaveBeenCalledWith(710, 427)
     expect(harness.viewportRef.current).toEqual({ cols: 54, rows: 47 })
     expect(harness.subscribeToTerminal).toHaveBeenCalledWith(HANDLE)
   })

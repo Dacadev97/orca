@@ -2,7 +2,8 @@ import { elementInRoot } from './document-host-seams'
 import { TERMINAL_TEXT_SCALES } from '../terminal-text-scales'
 import type { TerminalDocumentScope } from './document-scope'
 import { scheduleDocumentFrame } from './document-frame-registry'
-import { applyFitScale, getCellHeight, MIN_FIT_COLS } from './fit-scale'
+import { applyFitScale, getCellHeight } from './fit-scale'
+import { fitDimensionsFromCell } from '../terminal-grid-fit'
 import { getCellWidth } from './viewport-transform'
 import { emitKeyboardAvoidanceMetrics } from './keyboard-avoidance-metrics'
 
@@ -76,15 +77,20 @@ export function applyTextScale(scope: TerminalDocumentScope, scale: number) {
     }
     const cellW = getCellWidth(scope)
     const cellH = getCellHeight(scope)
-    if (cellW > 0 && cellH > 0) {
-      const cols = Math.floor(scope.viewportRect().width / cellW)
-      if (cols < MIN_FIT_COLS) {
-        // Why: hidden (0 wide) or too narrow; the next box must refit at the new cell size.
+    // Why: fit the frame React Native measured with, by the same formula; with none yet, the
+    // app's text-scale refit measures and resizes.
+    if (cellW > 0 && cellH > 0 && scope.hostFrame) {
+      const fit = fitDimensionsFromCell(
+        { cellWidth: cellW, cellHeight: cellH },
+        scope.hostFrame.width,
+        scope.hostFrame.height
+      )
+      if (!fit) {
+        // Why: too narrow; the next box must refit at the new cell size.
         scope.fittedBox = null
         return
       }
-      const rows = Math.max(8, Math.floor(scope.viewportRect().height / cellH))
-      scope.term.resize(cols, rows)
+      scope.term.resize(fit.cols, fit.rows)
       emitKeyboardAvoidanceMetrics(scope)
     }
     applyFitScale(scope, 'text-scale')

@@ -15,7 +15,7 @@ type TerminalPaneViewProps = {
   terminalTheme?: MobileTerminalTheme
   textScale: number
   onRef: (handle: string, ref: TerminalWebViewHandle | null) => void
-  onWebReady: (handle: string) => void
+  onWebReady: (handle: string, documentHasInit: boolean) => void
   onSelectionMode: (handle: string, active: boolean) => void
   onSelectionCopy: (handle: string, text: string) => void
   onSelectionEvicted: (handle: string) => void
@@ -76,7 +76,7 @@ export function TerminalPaneView({
         style={styles.terminalWebView}
         terminalTheme={terminalTheme}
         textScale={textScale}
-        onWebReady={() => onWebReady(handle)}
+        onWebReady={(document) => onWebReady(handle, document.hasInit)}
         onSelectionMode={(a) => onSelectionMode(handle, a)}
         onSelectionCopy={(t) => onSelectionCopy(handle, t)}
         onSelectionEvicted={() => onSelectionEvicted(handle)}

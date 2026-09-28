@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  createTerminalCellBoxStore,
-  fitDimensionsFromCell,
-  readTerminalCellMetrics
-} from './terminal-cell-metrics'
+import { createTerminalCellBoxStore, readTerminalCellMetrics } from './terminal-cell-metrics'
 
 // 23 device px at DPR 3: the WebGL renderer's 13px cell on the emulator.
 const CELL_1X = { fontScale: 1, cellWidth: 23 / 3, cellHeight: 15 }
@@ -20,17 +16,6 @@ describe('readTerminalCellMetrics', () => {
         cellMetrics: [null, { fontScale: 1, cellWidth: 0, cellHeight: 15 }, 'x', CELL_1X]
       })
     ).toEqual([CELL_1X])
-  })
-})
-
-describe('fitDimensionsFromCell', () => {
-  it('fits the frame as the document measure does', () => {
-    // floor(427 / 7.667) = 55, floor(710 / 15) = 47
-    expect(fitDimensionsFromCell(CELL_1X, 427, 710)).toEqual({ cols: 55, rows: 47 })
-  })
-
-  it('answers null for a frame too narrow to fit', () => {
-    expect(fitDimensionsFromCell(CELL_1X, 100, 710)).toBeNull()
   })
 })
 

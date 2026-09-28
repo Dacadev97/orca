@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { MIN_FIT_COLS, MIN_FIT_ROWS, type TerminalFitDimensions } from './terminal-cell-metrics'
+import { MIN_FIT_COLS, MIN_FIT_ROWS, type TerminalFitDimensions } from './terminal-grid-fit'
 import type { TerminalWebViewCommand } from './terminal-webview-messages'
 
 /**
@@ -68,7 +68,8 @@ export function createTerminalWebViewReadyPromises() {
 
   function measure(
     send: (command: TerminalWebViewCommand) => void,
-    containerHeight?: number
+    containerHeight?: number,
+    containerWidth?: number
   ): Promise<TerminalFitDimensions | null> {
     return new Promise((resolve) => {
       measureResolve?.(null)
@@ -84,7 +85,7 @@ export function createTerminalWebViewReadyPromises() {
         resolve(result)
       }
       measureResolve = finish
-      send({ type: 'measure', containerHeight })
+      send({ type: 'measure', containerHeight, containerWidth })
       // Why: if the document doesn't respond (e.g., xterm failed to load), resolve null so the
       // caller can disable Fit to Phone rather than hanging indefinitely.
       timeout = setTimeout(() => {

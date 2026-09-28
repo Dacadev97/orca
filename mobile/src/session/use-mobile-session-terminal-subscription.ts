@@ -229,6 +229,7 @@ export function useMobileSessionTerminalSubscription(
               initializedHandlesRef,
               terminalUnsubsRef,
               terminalFrameHeightRef,
+              terminalFrameWidthRef,
               getTerminalRef,
               unsubscribeTerminal,
               subscribeToTerminal,

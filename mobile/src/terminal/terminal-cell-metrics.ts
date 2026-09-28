@@ -7,12 +7,6 @@
 
 export type TerminalCellMetrics = { fontScale: number; cellWidth: number; cellHeight: number }
 
-export type TerminalFitDimensions = { cols: number; rows: number }
-
-/** Below these the fit is not a terminal anyone can read, and the caller disables fit-to-phone. */
-export const MIN_FIT_COLS = 20
-export const MIN_FIT_ROWS = 8
-
 function positive(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null
 }
@@ -42,19 +36,6 @@ export function readTerminalCellMetrics(msg: Record<string, unknown>): TerminalC
   return entries
 }
 
-/** The document's own measure, from numbers instead of a live terminal. */
-export function fitDimensionsFromCell(
-  cell: Pick<TerminalCellMetrics, 'cellWidth' | 'cellHeight'>,
-  width: number,
-  height: number
-): TerminalFitDimensions | null {
-  const cols = Math.floor(width / cell.cellWidth)
-  if (cols < MIN_FIT_COLS) {
-    return null
-  }
-  return { cols, rows: Math.max(MIN_FIT_ROWS, Math.floor(height / cell.cellHeight)) }
-}
-
 /** The boxes xterm laid out, per text size. */
 export function createTerminalCellBoxStore() {
   const cells = new Map<number, TerminalCellMetrics>()
@@ -70,9 +51,6 @@ export function createTerminalCellBoxStore() {
         previous !== undefined &&
         (previous.cellWidth !== entry.cellWidth || previous.cellHeight !== entry.cellHeight)
       )
-    },
-    clear() {
-      cells.clear()
     }
   }
 }

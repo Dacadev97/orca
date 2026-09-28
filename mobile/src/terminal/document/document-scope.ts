@@ -188,6 +188,8 @@ export type TerminalDocumentState = {
   fitRetryToken: number
   /** `fit-scale`: the viewport box the last fit was committed for, or null before one. */
   fittedBox: { width: number; height: number } | null
+  /** `host-message-router`: the terminal frame React Native last measured with, or null before one. */
+  hostFrame: { width: number; height: number } | null
   /** `mouse-click-drag`: the mouse gesture in progress, or null. */
   mouseGesture: TerminalMouseGesture | null
   /** `tap-dispatch`: what the document-level dispatcher has latched onto. */
@@ -316,6 +318,7 @@ function createTerminalDocumentState(): TerminalDocumentState {
     removeWebglRecovery: null,
     fitRetryToken: 0,
     fittedBox: null,
+    hostFrame: null,
     mouseGesture: null,
     touchDispatch: {
       mode: 'idle',

@@ -1,6 +1,7 @@
 import type { TerminalDocumentScope } from './document-scope'
 import { scheduleDocumentFrame } from './document-frame-registry'
-import { applyFitScale, MIN_FIT_COLS } from './fit-scale'
+import { applyFitScale } from './fit-scale'
+import { fitDimensionsFromCell } from '../terminal-grid-fit'
 import { notify } from './host-notify'
 import { emitKeyboardAvoidanceMetrics } from './keyboard-avoidance-metrics'
 import { emitModesIfChanged } from './mode-mirroring'
@@ -28,11 +29,12 @@ export type TerminalHostMessage = {
   oscLinks?: unknown
   data?: string
   containerHeight?: number
+  containerWidth?: number
 }
 
 export function measureFitDimensions(
   scope: TerminalDocumentScope,
-  containerHeightPx: unknown,
+  frame: { width: number; height: number },
   retriesLeft?: number
 ) {
   if (typeof retriesLeft !== 'number') {
@@ -60,7 +62,7 @@ export function measureFitDimensions(
         if (gen !== scope.terminalGeneration) {
           return
         }
-        measureFitDimensions(scope, containerHeightPx, retriesLeft - 1)
+        measureFitDimensions(scope, frame, retriesLeft - 1)
       })
       return
     }
@@ -73,37 +75,22 @@ export function measureFitDimensions(
     notify(scope, { type: 'measure-result', cols: null, rows: null })
     return
   }
-  const viewport = scope.viewportRect()
-  const vpWidth = viewport.width
-  // Why: prefer the container height passed from React Native over the
-  // viewport's. The RN layout system knows the exact pixel height of the
-  // terminal frame after the accessory/input bars are subtracted, whereas
-  // the viewport can overstate the visible area due to layout timing or
-  // safe-area insets.
-  const vpHeight =
-    typeof containerHeightPx === 'number' && containerHeightPx > 0
-      ? containerHeightPx
-      : viewport.height
-  const cols = Math.floor(vpWidth / cellWidth)
-  if (cols < MIN_FIT_COLS) {
+  // Why: the frame box React Native laid out, fitted by the app's own formula, so this measure and
+  // the first subscribe's fit agree to the column.
+  const fit = fitDimensionsFromCell({ cellWidth, cellHeight }, frame.width, frame.height)
+  if (!fit) {
     flog(scope, 'measure-skip-small-width', {
-      vpWidth: vpWidth,
-      cellWidth: cellWidth,
-      cols: cols
+      frameWidth: frame.width,
+      cellWidth: cellWidth
     })
     notify(scope, { type: 'measure-result', cols: null, rows: null })
     return
   }
   // Why: the rows we report become the PTY's actual row count after the
   // server fits to viewport, and xterm renders exactly that many lines
-  // anchored top-left of the WebView. Subtracting rows here would leave
-  // dead xterm-background space at the bottom of the container and make
-  // the last PTY rows visually appear above an "invisible line." Any
-  // safety margin between the prompt and the accessory bar must come
-  // from RN layout (terminalFrame's flex bounds), not from undersizing
-  // the PTY.
-  const rows = Math.max(8, Math.floor(vpHeight / cellHeight))
-  notify(scope, { type: 'measure-result', cols: cols, rows: rows })
+  // anchored top-left of the WebView. Any safety margin between the prompt
+  // and the accessory bar must come from RN layout, not from undersizing the PTY.
+  notify(scope, { type: 'measure-result', cols: fit.cols, rows: fit.rows })
 }
 
 export function handleMsg(scope: TerminalDocumentScope, msg: TerminalHostMessage) {
@@ -175,7 +162,13 @@ export function handleMsg(scope: TerminalDocumentScope, msg: TerminalHostMessage
       cancelSelect(scope)
     }
   } else if (msg.type === 'measure') {
-    measureFitDimensions(scope, msg.containerHeight)
+    const height =
+      typeof msg.containerHeight === 'number' && msg.containerHeight > 0
+        ? msg.containerHeight
+        : scope.viewportRect().height
+    const width = typeof msg.containerWidth === 'number' ? msg.containerWidth : 0
+    scope.hostFrame = width > 0 ? { width, height } : null
+    measureFitDimensions(scope, { width, height })
   } else if (msg.type === 'reset-zoom') {
     applyFitScale(scope, 'reset-zoom-msg')
   } else if (msg.type === 'set-theme') {

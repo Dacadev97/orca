@@ -51,8 +51,9 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
       pingsOnForegroundRecovery: () => false
     })
     const { clearEngineError, engineError, handle, receive, resetReadiness } = controller
-    // The scale the next document is built at; later changes reach it as set-font-scale.
-    const textScaleRef = useRef(props.textScale ?? 1)
+    // Why: every document this view builds starts at the scale it mounted with, as the native
+    // WebView's pre-content script does; later changes reach it as set-font-scale and init.
+    const [initialTextScale] = useState(() => props.textScale ?? 1)
     // The page's answer to the WebView's reload: drop the document and build another one. The host
     // element is keyed on it so React replaces the div rather than handing back one xterm left in.
     const [generation, setGeneration] = useState(0)
@@ -65,10 +66,6 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
       receiveRef.current = receive
     }, [receive])
     useEffect(() => {
-      textScaleRef.current = props.textScale ?? 1
-    }, [props.textScale])
-
-    useEffect(() => {
       // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: react-native-web renders View as a div and forwards the ref to it; this module only ever runs in that build.
       const host = hostRef.current as unknown as HTMLElement | null
       if (!host) {
@@ -79,7 +76,7 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
         live = mountTerminalWebDocument(
           host,
           (message) => receiveRef.current?.(message),
-          textScaleRef.current
+          initialTextScale
         )
       } catch (error) {
         // A start that throws is the document's own failure and the factory has already unwound

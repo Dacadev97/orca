@@ -153,7 +153,12 @@ export function mapCursorUsageSummary(summary: CursorUsageSummary): CursorUsageM
     buckets.push({ name: CURSOR_ON_DEMAND_BUCKET_NAME, ...toWindow(onDemandPercent) })
   }
 
-  const planPercent = planEnabled ? finiteNumber(plan?.totalPercentUsed) : null
+  // Prefer totalPercentUsed (matches the sibling pool percents and avoids the
+  // used/limit pair hitting 100% on a Pro Plus base allowance); fall back to
+  // used/limit only when the account's response omits totalPercentUsed.
+  const planPercent = planEnabled
+    ? (finiteNumber(plan?.totalPercentUsed) ?? poolPercent(plan, 'totalPercentUsed'))
+    : null
   const membership = summary.membershipType
   return {
     monthly: planPercent === null ? null : toWindow(planPercent),

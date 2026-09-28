@@ -101,9 +101,9 @@ function windowMinutesFor(startMs: number | null, endMs: number | null): number 
 }
 
 /**
- * Percent consumed for one pool. `used / limit` wins over the sibling percentage
- * fields: the raw pair is internally consistent, while the percentages are
- * pre-rounded for the dashboard's own copy and disagree with it on real accounts.
+ * Percent consumed for the on-demand pool. `used / limit` wins over
+ * `totalPercentUsed`: the raw pair is internally consistent, while the percentage
+ * is pre-rounded for the dashboard's own copy and disagrees with it on real accounts.
  */
 function poolPercent(
   pool: CursorPool | null | undefined,
@@ -153,7 +153,7 @@ export function mapCursorUsageSummary(summary: CursorUsageSummary): CursorUsageM
     buckets.push({ name: CURSOR_ON_DEMAND_BUCKET_NAME, ...toWindow(onDemandPercent) })
   }
 
-  const planPercent = planEnabled ? poolPercent(plan, 'totalPercentUsed') : null
+  const planPercent = planEnabled ? finiteNumber(plan?.totalPercentUsed) : null
   const membership = summary.membershipType
   return {
     monthly: planPercent === null ? null : toWindow(planPercent),

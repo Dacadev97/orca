@@ -16,7 +16,14 @@ describe('mapCursorUsageSummary', () => {
       ...CYCLE,
       membershipType: 'pro',
       individualUsage: {
-        plan: { enabled: true, used: 1_250, limit: 5_000, autoPercentUsed: 40, apiPercentUsed: 10 }
+        plan: {
+          enabled: true,
+          used: 1_250,
+          limit: 5_000,
+          autoPercentUsed: 40,
+          apiPercentUsed: 10,
+          totalPercentUsed: 18
+        }
       }
     })
     expect(mapped.planType).toBe('pro')
@@ -24,16 +31,16 @@ describe('mapCursorUsageSummary', () => {
       ['Cursor Models', 40],
       ['Other Models', 10]
     ])
-    expect(mapped.monthly?.usedPercent).toBe(25)
+    expect(mapped.monthly?.usedPercent).toBe(18)
     expect(mapped.monthly?.resetsAt).toBe(Date.parse(CYCLE.billingCycleEnd))
   })
 
-  it('prefers the used/limit pair over the rounded percentage Cursor renders', () => {
+  it('reports monthly Plan percent from totalPercentUsed even when used/limit would compute 100%', () => {
     const mapped = mapCursorUsageSummary({
       ...CYCLE,
-      individualUsage: { plan: { enabled: true, used: 1_000, limit: 3_000, totalPercentUsed: 33 } }
+      individualUsage: { plan: { enabled: true, used: 2_000, limit: 2_000, totalPercentUsed: 12 } }
     })
-    expect(mapped.monthly?.usedPercent).toBeCloseTo(33.333, 3)
+    expect(mapped.monthly?.usedPercent).toBe(12)
   })
 
   it('falls back to the percentage when no cents allowance is reported', () => {
@@ -69,7 +76,7 @@ describe('mapCursorUsageSummary', () => {
   it('clamps an over-consumed pool to 100% instead of overflowing the bar', () => {
     const mapped = mapCursorUsageSummary({
       ...CYCLE,
-      individualUsage: { plan: { enabled: true, used: 7_000, limit: 5_000 } }
+      individualUsage: { plan: { enabled: true, totalPercentUsed: 140 } }
     })
     expect(mapped.monthly?.usedPercent).toBe(100)
   })

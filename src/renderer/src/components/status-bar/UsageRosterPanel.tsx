@@ -5,6 +5,7 @@ import { SettingsSegmentedControl } from '@/components/settings/SettingsFormCont
 import { useResetCountdownClock } from '@/hooks/useResetCountdownClock'
 import { translate } from '@/i18n/i18n'
 import { formatRateLimitWindowChipLabel, formatWindowLabel } from '@/lib/window-label-formatter'
+import { CURSOR_MODELS_BUCKET_NAME } from '../../../../shared/cursor-usage-buckets'
 import type { ProviderRateLimits, RateLimitWindow } from '../../../../shared/rate-limit-types'
 import {
   clampUsedPercent,
@@ -29,10 +30,30 @@ function usedSections(p: ProviderRateLimits): UsageSection[] {
   )
 }
 
-function providerMaxUsed(sections: UsageSection[]): number {
-  return sections.length > 0
-    ? Math.max(...sections.map((s) => clampUsedPercent(s.window.usedPercent)))
-    : 0
+function maxUsedSection(sections: UsageSection[]): UsageSection {
+  return sections.reduce((current, candidate) =>
+    clampUsedPercent(candidate.window.usedPercent) > clampUsedPercent(current.window.usedPercent)
+      ? candidate
+      : current
+  )
+}
+
+// Why: Cursor's base-allowance Plan window and its Other Models pool can spike
+// while the primary Cursor Models pool the account actually draws from stays
+// low; picking the raw max would headline (and sort by) a number the user
+// isn't close to exhausting. Every other provider keeps the plain max reduce.
+function tightestSection(p: ProviderRateLimits, sections: UsageSection[]): UsageSection {
+  if (p.provider === 'cursor') {
+    const cursorModels = sections.find((s) => s.label === CURSOR_MODELS_BUCKET_NAME)
+    if (cursorModels) {
+      return cursorModels
+    }
+  }
+  return maxUsedSection(sections)
+}
+
+function providerMaxUsed(p: ProviderRateLimits, sections: UsageSection[]): number {
+  return sections.length > 0 ? clampUsedPercent(tightestSection(p, sections).window.usedPercent) : 0
 }
 
 // Buckets (Gemini Flash/Pro) keep their model name; windows use their duration.
@@ -61,11 +82,7 @@ export function getTightestUsageSection(p: ProviderRateLimits): UsageSection | n
   }
   // Why: the footer promises one quiet summary per provider; choose urgency by
   // consumption even when the user displays the complementary “% left” value.
-  const tightest = sections.reduce((current, candidate) =>
-    clampUsedPercent(candidate.window.usedPercent) > clampUsedPercent(current.window.usedPercent)
-      ? candidate
-      : current
-  )
+  const tightest = tightestSection(p, sections)
   return { ...tightest, label: shortLabel(p, tightest, true) }
 }
 
@@ -225,7 +242,7 @@ export function UsageRosterPanel({
   )
   // Worst-first so the agent nearest a limit sits on top.
   const sorted = [...providers].sort(
-    (a, b) => providerMaxUsed(usedSections(b)) - providerMaxUsed(usedSections(a))
+    (a, b) => providerMaxUsed(b, usedSections(b)) - providerMaxUsed(a, usedSections(a))
   )
 
   return (

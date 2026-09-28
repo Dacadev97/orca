@@ -171,6 +171,52 @@ describe('UsageRow', () => {
     expect(markup).not.toContain('Resets in')
   })
 
+  it('prefers the Cursor Models bucket over a higher Plan or Other Models percentage in compact mode', () => {
+    const markup = renderToStaticMarkup(
+      <UsageRow
+        p={{
+          provider: 'cursor',
+          session: null,
+          weekly: null,
+          monthly: {
+            usedPercent: 100,
+            windowMinutes: 43_200,
+            resetsAt: null,
+            resetDescription: null
+          },
+          buckets: [
+            {
+              name: 'Cursor Models',
+              usedPercent: 7,
+              windowMinutes: 43_200,
+              resetsAt: null,
+              resetDescription: null
+            },
+            {
+              name: 'Other Models',
+              usedPercent: 18,
+              windowMinutes: 43_200,
+              resetsAt: null,
+              resetDescription: null
+            }
+          ],
+          updatedAt: 0,
+          status: 'ok',
+          error: null
+        }}
+        display="used"
+        mode="compact"
+        state={{ kind: 'usage', statusLabel: null }}
+        showSignInAction={false}
+        now={mocks.now}
+      />
+    )
+
+    expect(markup).toContain('7%')
+    expect(markup).not.toContain('100%')
+    expect(markup).not.toContain('18%')
+  })
+
   it('uses the same compact selection for Claude subscription windows', () => {
     const markup = renderToStaticMarkup(
       <UsageRow
@@ -246,6 +292,71 @@ describe('UsageRow', () => {
     expect(markup.match(/data-usage-bar/g)).toHaveLength(2)
     expect(markup).toContain('25%')
     expect(markup).toContain('60%')
+  })
+})
+
+describe('UsageRosterPanel worst-first sort', () => {
+  beforeEach(() => {
+    mocks.useResetCountdownClock.mockClear()
+  })
+
+  it('does not sort a Cursor provider above another provider on an Other Models spike its headline never shows', () => {
+    const cursorProvider: ProviderRateLimits = {
+      provider: 'cursor',
+      session: null,
+      weekly: null,
+      monthly: { usedPercent: 12, windowMinutes: 43_200, resetsAt: null, resetDescription: null },
+      buckets: [
+        {
+          name: 'Cursor Models',
+          usedPercent: 10,
+          windowMinutes: 43_200,
+          resetsAt: null,
+          resetDescription: null
+        },
+        {
+          name: 'Other Models',
+          usedPercent: 90,
+          windowMinutes: 43_200,
+          resetsAt: null,
+          resetDescription: null
+        }
+      ],
+      updatedAt: 0,
+      status: 'ok',
+      error: null
+    }
+    const codexProvider: ProviderRateLimits = {
+      ...signedOutCodex,
+      session: null,
+      weekly: { usedPercent: 50, windowMinutes: 10_080, resetsAt: null, resetDescription: null },
+      status: 'ok',
+      error: null
+    }
+
+    const markup = renderToStaticMarkup(
+      <TooltipProvider>
+        <UsageRosterPanel
+          providers={[cursorProvider, codexProvider]}
+          display="used"
+          statusBarUsageMode="compact"
+          onStatusBarUsageModeChange={() => {}}
+          isRefreshing={false}
+          onRefresh={() => {}}
+          onOpenProvider={() => {}}
+          onSignIn={() => {}}
+          canSignIn={() => true}
+          onManageAccounts={() => {}}
+          onUsageDetails={() => {}}
+        />
+      </TooltipProvider>
+    )
+
+    const codexIndex = markup.indexOf('Codex')
+    const cursorIndex = markup.indexOf('Cursor')
+    expect(codexIndex).toBeGreaterThan(-1)
+    expect(cursorIndex).toBeGreaterThan(-1)
+    expect(codexIndex).toBeLessThan(cursorIndex)
   })
 })
 

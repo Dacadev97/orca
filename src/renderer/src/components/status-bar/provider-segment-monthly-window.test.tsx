@@ -184,6 +184,77 @@ describe('ProviderSegment monthly window', () => {
   })
 })
 
+describe('getTightestUsageSection for Cursor', () => {
+  it('prefers the Cursor Models bucket over a higher Plan or Other Models percentage', async () => {
+    const { getTightestUsageSection } = await import('./UsageRosterPanel')
+
+    const limits: ProviderRateLimits = {
+      provider: 'cursor',
+      session: null,
+      weekly: null,
+      monthly: windowOf(100, 43_200),
+      buckets: [
+        { ...windowOf(7, 43_200), name: 'Cursor Models' },
+        { ...windowOf(18, 43_200), name: 'Other Models' }
+      ],
+      updatedAt: Date.now(),
+      error: null,
+      status: 'ok'
+    }
+
+    const tightest = getTightestUsageSection(limits)
+    expect(tightest?.window.usedPercent).toBe(7)
+  })
+
+  it('falls back to the max reduce when no Cursor Models bucket is present', async () => {
+    const { getTightestUsageSection } = await import('./UsageRosterPanel')
+
+    const limits: ProviderRateLimits = {
+      provider: 'cursor',
+      session: null,
+      weekly: null,
+      monthly: windowOf(12, 43_200),
+      buckets: [{ ...windowOf(18, 43_200), name: 'Other Models' }],
+      updatedAt: Date.now(),
+      error: null,
+      status: 'ok'
+    }
+
+    const tightest = getTightestUsageSection(limits)
+    expect(tightest?.window.usedPercent).toBe(18)
+  })
+})
+
+describe('getTightestUsageSection max reduce for non-Cursor providers', () => {
+  it('keeps the plain max(usedPercent) reduce for Claude, Codex, and Gemini', async () => {
+    const { getTightestUsageSection } = await import('./UsageRosterPanel')
+
+    const claude: ProviderRateLimits = {
+      provider: 'claude',
+      session: windowOf(25, 300),
+      weekly: windowOf(60, 10_080),
+      updatedAt: Date.now(),
+      error: null,
+      status: 'ok'
+    }
+    expect(getTightestUsageSection(claude)?.window.usedPercent).toBe(60)
+
+    const gemini: ProviderRateLimits = {
+      provider: 'gemini',
+      session: null,
+      weekly: null,
+      buckets: [
+        { ...windowOf(25, 300), name: 'Flash' },
+        { ...windowOf(80, 300), name: 'Pro' }
+      ],
+      updatedAt: Date.now(),
+      error: null,
+      status: 'ok'
+    }
+    expect(getTightestUsageSection(gemini)?.window.usedPercent).toBe(80)
+  })
+})
+
 describe('undefined provider window safety (crash d2c1da69 / bb74236c)', () => {
   // A partial/rehydrated provider can carry an undefined (not null) window even
   // though the type declares `session`/`weekly` as `RateLimitWindow | null`. The

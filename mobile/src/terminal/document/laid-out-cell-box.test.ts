@@ -63,6 +63,15 @@ describe('laidOutCellMetrics', () => {
     ])
   })
 
+  it('tells the host a new grid even when the box stayed, so the host holds the grid it has', () => {
+    const posted: Record<string, unknown>[] = []
+    const scope = scopeWithCell({ width: 29 / 3, height: 21 }, fontPxForScale(1.25), posted)
+    reportLaidOutCellBox(scope)
+    Object.assign(scope.term!, { cols: 50 })
+    reportLaidOutCellBox(scope)
+    expect(posted.map((message) => message.cols)).toEqual([55, 50])
+  })
+
   it('reports nothing while a text-size change is between font and scale', () => {
     const scope = scopeWithCell({ width: 29 / 3, height: 21 }, fontPxForScale(1))
     expect(laidOutCellMetrics(scope)).toEqual([])
@@ -137,6 +146,21 @@ describe('a started document', () => {
           { fontScale: 1.25, cellWidth: (23 / 3) * (16 / 13), cellHeight: 15 * (16 / 13) }
         ]
       })
+    } finally {
+      stopTerminalDocument(scope)
+    }
+  })
+
+  it('leaves no live terminal when opening the one it builds before ready throws', () => {
+    const double = terminalDocumentDouble()
+    double.terminal.open = () => {
+      throw new Error('no surface')
+    }
+    const { scope, posted } = started({ createTerminal: () => double.terminal })
+    try {
+      expect(scope.term).toBeNull()
+      expect(double.disposals()).toBe(1)
+      expect(posted[0]).toEqual({ type: 'web-ready', cellMetrics: [] })
     } finally {
       stopTerminalDocument(scope)
     }

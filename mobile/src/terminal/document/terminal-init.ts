@@ -72,6 +72,9 @@ export function prepareTerminal(scope: TerminalDocumentScope) {
   } catch {
     // Why: init builds again and reports the failure through the path every init failure takes.
     scope.surface!.style.visibility = ''
+    try {
+      scope.term?.dispose()
+    } catch {}
     scope.term = null
   }
 }

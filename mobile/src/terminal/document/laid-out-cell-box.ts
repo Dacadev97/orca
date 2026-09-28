@@ -22,15 +22,18 @@ export function laidOutCellMetrics(scope: TerminalDocumentScope): TerminalCellMe
 }
 
 /**
- * Tells the host the box xterm laid out whenever it changes: after init, a renderer swap on
- * context loss, a text-size or DPR change, or a resize (the DOM renderer's width depends on cols).
+ * Tells the host the box xterm laid out whenever it or the grid changes: after init, a renderer
+ * swap on context loss, a text-size or DPR change, or a resize (the DOM renderer's width depends on
+ * cols). A new grid is reported with an unchanged box too, so the host holds the grid in place
+ * when a later renderer swap arrives at it.
  */
 export function reportLaidOutCellBox(scope: TerminalDocumentScope) {
   const [laidOut] = laidOutCellMetrics(scope)
   if (!laidOut || !scope.term) {
     return
   }
-  const key = laidOut.fontScale + ':' + laidOut.cellWidth + 'x' + laidOut.cellHeight
+  const { cols, rows } = scope.term
+  const key = `${laidOut.fontScale}:${laidOut.cellWidth}x${laidOut.cellHeight}@${cols}x${rows}`
   if (key === scope.reportedCellBox) {
     return
   }
@@ -38,7 +41,7 @@ export function reportLaidOutCellBox(scope: TerminalDocumentScope) {
   notify(scope, {
     type: 'cell-metrics',
     cellMetrics: [laidOut],
-    cols: scope.term.cols,
-    rows: scope.term.rows
+    cols,
+    rows
   })
 }

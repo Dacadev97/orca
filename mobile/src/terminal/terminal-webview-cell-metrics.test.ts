@@ -156,6 +156,27 @@ describe('the cell box xterm laid out', () => {
     expect(onCellBoxChange).not.toHaveBeenCalled()
   })
 
+  it('refits a renderer swap at a grid applied in place, which the document reported unchanged box and all', () => {
+    const { handle, notify, onCellBoxChange } = mount()
+    notify({ type: 'web-ready', cellMetrics: [cellAt(scale)] })
+    expect(handle().seedFitDimensions(FRAME)).toEqual({ cols: 55, rows: 47 })
+    // A width change applied in place: the WebGL box is unchanged, and the new grid is reported.
+    handle().reflow(50, 47)
+    notify(cellMetrics(23 / 3, 50))
+    // WebGL context lost: the DOM fallback reports its box at the same grid.
+    notify(cellMetrics(7.8, 50))
+    expect(onCellBoxChange).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not refit the DOM renderer's box for a grid it was just given, so it cannot loop", () => {
+    const { handle, notify, onCellBoxChange } = mount()
+    notify({ type: 'web-ready', cellMetrics: [cellAt(scale)] })
+    notify(cellMetrics(7.8, 55))
+    handle().reflow(50, 47)
+    notify(cellMetrics(7.9, 50))
+    expect(onCellBoxChange).not.toHaveBeenCalled()
+  })
+
   it('measures the live document for a refit, against the frame the app laid out', async () => {
     const { handle, notify } = mount()
     notify({ type: 'web-ready', cellMetrics: [cellAt(scale)] })
@@ -274,6 +295,19 @@ describe('the cell box xterm laid out', () => {
     act(() => oldDocument({ nativeEvent: { data: JSON.stringify(cellMetrics(7.8, 55)) } }))
     expect(onCellBoxChange).not.toHaveBeenCalled()
     expect(handle().fitDimensions(FRAME)).toEqual({ cols: 55, rows: 47 })
+  })
+
+  it('ignores a load start from a view a replacement unmounted', () => {
+    const { handle, notify, webView } = mount()
+    act(() => webView().props.onLoadStart())
+    const oldLoadStart = webView().props.onLoadStart
+    act(() => webView().props.onContentProcessDidTerminate({ nativeEvent: {} }))
+    act(() => webView().props.onLoadStart())
+    notify({ type: 'web-ready', cellMetrics: [cellAt(scale)] })
+    act(() => oldLoadStart())
+    nativeWebViewMethods.postMessage.mockClear()
+    handle().init(55, 47, 'snapshot')
+    expect(postedTypes()).toEqual(['init'])
   })
 
   it('tells the document the app text scale before it builds its terminal', () => {

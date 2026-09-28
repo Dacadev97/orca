@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react'
 import type { TerminalOscLinkRange } from '../../../src/shared/terminal-osc-link-ranges'
 import { readTerminalCellMetrics, terminalCellBoxes } from './terminal-cell-metrics'
 import { useTerminalViewGeneration } from './terminal-view-generation'
+import { holdGrid } from './terminal-held-grid'
 import { createDocumentInitTracker } from './terminal-document-init-tracker'
 import type { TerminalWebViewHandle, TerminalWebViewProps } from './terminal-webview-contract'
 import { useTerminalWebViewEngineErrorState } from './terminal-webview-engine-error-state'
@@ -79,8 +80,8 @@ export function useTerminalWebViewController(
   const promises = useTerminalWebViewReadyPromises()
   // Why: a box that changes while the grid does not is a renderer or pixel-ratio change and needs a
   // refit; one that arrives with a new grid is that grid's own (the DOM renderer's width follows cols).
-  // The last grid is the one last reported, or fitted from the stored box, across documents — so a
-  // new document's first report is checked against the grid its subscribe used.
+  // The last grid is the one last reported, or fitted from the stored box, across documents. The
+  // document reports every grid change, so an in-place reflow is held before a later renderer swap.
   const lastGridRef = useRef<string | null>(null)
   const { clearEngineError, engineError, reportEngineError, reportNativeEngineError } =
     useTerminalWebViewEngineErrorState(onEngineError)
@@ -203,9 +204,7 @@ export function useTerminalWebViewController(
         promises.resolveReady()
       } else if (msg.type === 'cell-metrics') {
         const [laidOut] = readTerminalCellMetrics(msg)
-        const grid = `${String(msg.cols)}x${String(msg.rows)}`
-        const sameGrid = grid === lastGridRef.current
-        lastGridRef.current = grid
+        const sameGrid = holdGrid(lastGridRef, msg.cols, msg.rows)
         if (laidOut && terminalCellBoxes.record(laidOut) && sameGrid) {
           onCellBoxChange?.()
         }
@@ -321,7 +320,7 @@ export function useTerminalWebViewController(
       seedFitDimensions(frame: { width: number; height: number }) {
         const fit = fitDimensions(frame)
         if (fit) {
-          lastGridRef.current = `${fit.cols}x${fit.rows}`
+          holdGrid(lastGridRef, fit.cols, fit.rows)
         }
         return fit
       },

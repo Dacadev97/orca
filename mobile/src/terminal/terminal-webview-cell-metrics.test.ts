@@ -177,6 +177,19 @@ describe('the cell box xterm laid out', () => {
     expect(onCellBoxChange).not.toHaveBeenCalled()
   })
 
+  it("refits a DOM seed once on its first report, and not again on the refit's own report", () => {
+    mount().notify({ type: 'web-ready', cellMetrics: [cellAt(scale, 7.8)] })
+    const { handle, notify, onCellBoxChange } = mount()
+    expect(handle().seedFitDimensions(FRAME)).toEqual({ cols: 54, rows: 47 })
+    notify({ type: 'web-ready', cellMetrics: [] })
+    // The DOM renderer's box at the seeded grid: its width follows cols, so it differs.
+    notify(cellMetrics(7.9, 54))
+    expect(onCellBoxChange).toHaveBeenCalledTimes(1)
+    handle().reflow(53, 47)
+    notify(cellMetrics(8.05, 53))
+    expect(onCellBoxChange).toHaveBeenCalledTimes(1)
+  })
+
   it('measures the live document for a refit, against the frame the app laid out', async () => {
     const { handle, notify } = mount()
     notify({ type: 'web-ready', cellMetrics: [cellAt(scale)] })

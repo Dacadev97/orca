@@ -47,6 +47,7 @@ beforeEach(() => {
 afterEach(() => {
   act(() => renderers.splice(0).forEach((renderer) => renderer.unmount()))
   nativeWebViewMethods.postMessage.mockClear()
+  vi.useRealTimers()
 })
 
 function mount(textScale = scale) {
@@ -139,10 +140,20 @@ describe('the cell box xterm laid out', () => {
   it('refits when the first box after a boxless ready differs from the one the subscribe used', () => {
     mount().notify({ type: 'web-ready', cellMetrics: [cellAt(scale)] })
     const second = mount()
-    expect(second.handle().fitDimensions(FRAME)).toEqual({ cols: 55, rows: 47 })
+    expect(second.handle().seedFitDimensions(FRAME)).toEqual({ cols: 55, rows: 47 })
     second.notify({ type: 'web-ready', cellMetrics: [] })
     second.notify(cellMetrics(7.8, 55))
     expect(second.onCellBoxChange).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not refit a width change to a new grid when the DOM renderer reports that grid's box", () => {
+    const { handle, notify, onCellBoxChange } = mount()
+    notify({ type: 'web-ready', cellMetrics: [cellAt(scale)] })
+    notify(cellMetrics(23 / 3, 55))
+    // The width refit asks whether the new width keeps the grid; asking is not a new grid.
+    expect(handle().fitDimensions({ width: 390, height: 710 })).toEqual({ cols: 50, rows: 47 })
+    notify(cellMetrics(7.8, 50))
+    expect(onCellBoxChange).not.toHaveBeenCalled()
   })
 
   it('measures the live document for a refit, against the frame the app laid out', async () => {
@@ -181,6 +192,22 @@ describe('the cell box xterm laid out', () => {
     act(() => webView().props.onLoadStart())
     notify({ type: 'web-ready', cellMetrics: [cellAt(scale)] })
     expect(postedTypes()).not.toContain('init')
+  })
+
+  it('drops queued and coalesced commands on either replacement: a reload or a new view', () => {
+    vi.useFakeTimers()
+    const { handle, notify, webView } = mount()
+    act(() => webView().props.onLoadStart())
+    handle().write('for the reloaded document')
+    act(() => webView().props.onLoadStart())
+    handle().write('for the replaced view')
+    act(() => webView().props.onContentProcessDidTerminate({ nativeEvent: {} }))
+    notify({ type: 'web-ready', cellMetrics: [cellAt(scale)] })
+    act(() => vi.runAllTimers())
+    expect(postedTypes()).not.toContain('write')
+    handle().write('for the current document')
+    act(() => vi.runAllTimers())
+    expect(postedTypes()).toContain('write')
   })
 
   it('tells the session a document that lost its queued init to a reload before its first ready', () => {

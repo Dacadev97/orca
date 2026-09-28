@@ -52,7 +52,7 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
       // were gone so was the component holding this handle.
       pingsOnForegroundRecovery: () => false
     })
-    const { clearEngineError, documentGeneration, engineError, handle, receive, replaceDocument } =
+    const { clearEngineError, viewGeneration, engineError, handle, receive, replaceDocument } =
       controller
     // Why: every document this view builds starts as the view mounted — its scale, and whether it
     // was shown — as the native WebView's pre-content script does; later scales arrive with init.
@@ -78,7 +78,7 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
       try {
         live = mountTerminalWebDocument(
           host,
-          (message) => receiveRef.current?.(message, documentGeneration),
+          (message) => receiveRef.current?.(message, viewGeneration),
           atMount
         )
       } catch (error) {
@@ -94,7 +94,7 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
               error instanceof Error ? error.message : String(error)
             }`
           },
-          documentGeneration
+          viewGeneration
         )
         return
       }
@@ -113,7 +113,7 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
       }
       // Mounted once per generation: re-running this would throw away a live terminal and its
       // scrollback, and the controller's identity changes with every callback prop.
-    }, [atMount, documentGeneration])
+    }, [atMount, viewGeneration])
 
     // The page's answer to the WebView's reload: drop the document and build another one. The host
     // element is keyed on the generation so React replaces the div rather than handing back one
@@ -126,11 +126,7 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
 
     return (
       <View style={[TERMINAL_WEBVIEW_FRAME_STYLES.container, props.style]}>
-        <View
-          key={documentGeneration}
-          ref={hostRef}
-          style={TERMINAL_WEBVIEW_FRAME_STYLES.webview}
-        />
+        <View key={viewGeneration} ref={hostRef} style={TERMINAL_WEBVIEW_FRAME_STYLES.webview} />
         {engineError ? (
           <TerminalWebViewEngineErrorOverlay message={engineError} onReload={handleReload} />
         ) : null}

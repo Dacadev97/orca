@@ -15,12 +15,12 @@ const PHONE = { cols: 55, rows: 44 }
 
 describe('seedTerminalViewportFromCellMetrics', () => {
   function seedArgs(
-    fitDimensions: (frame: { width: number; height: number }) => typeof PHONE | null
+    seedFitDimensions: (frame: { width: number; height: number }) => typeof PHONE | null
   ) {
     const viewportRef: { current: typeof PHONE | null } = { current: null }
     return {
       handle: HANDLE,
-      ref: { fitDimensions: vi.fn(fitDimensions) },
+      ref: { seedFitDimensions: vi.fn(seedFitDimensions) },
       viewportRef,
       viewportMeasuredRef: { current: false },
       terminalFrameWidthRef: { current: 427.5 },
@@ -32,7 +32,7 @@ describe('seedTerminalViewportFromCellMetrics', () => {
   it('sizes an unmeasured route from the stored cell box against the laid-out frame', () => {
     const args = seedArgs(() => PHONE)
     seedTerminalViewportFromCellMetrics(args)
-    expect(args.ref.fitDimensions).toHaveBeenCalledWith({ width: 427.5, height: 751 })
+    expect(args.ref.seedFitDimensions).toHaveBeenCalledWith({ width: 427.5, height: 751 })
     expect(args.viewportRef.current).toEqual(PHONE)
     expect(args.viewportMeasuredRef.current).toBe(true)
     expect(args.onMeasured).toHaveBeenCalledWith(HANDLE, PHONE, 751)
@@ -49,7 +49,7 @@ describe('seedTerminalViewportFromCellMetrics', () => {
     const args = seedArgs(() => PHONE)
     args.viewportMeasuredRef.current = true
     seedTerminalViewportFromCellMetrics(args)
-    expect(args.ref.fitDimensions).not.toHaveBeenCalled()
+    expect(args.ref.seedFitDimensions).not.toHaveBeenCalled()
   })
 })
 
@@ -71,7 +71,7 @@ function subscriptionHarness(opts: {
     resize: vi.fn(),
     reflow: vi.fn(),
     clear: vi.fn(),
-    fitDimensions: vi.fn(() => fit),
+    seedFitDimensions: vi.fn(() => fit),
     measureFitDimensions: vi.fn(async () => fit ?? PHONE),
     resetZoom: vi.fn(),
     cancelSelect: vi.fn(),

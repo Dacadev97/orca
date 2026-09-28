@@ -98,6 +98,11 @@ export type TerminalWebViewHandle = {
   clear: () => void
   /** The fit for this frame from the cell box xterm laid out at the current text size; null until one is known. */
   fitDimensions: (frame: { width: number; height: number }) => { cols: number; rows: number } | null
+  /** The first subscribe's fit, which the document's first report is then checked against. */
+  seedFitDimensions: (frame: {
+    width: number
+    height: number
+  }) => { cols: number; rows: number } | null
   // Why: the frame box React Native laid out; the document fits it with the app's own formula.
   measureFitDimensions: (
     frameHeight: number,

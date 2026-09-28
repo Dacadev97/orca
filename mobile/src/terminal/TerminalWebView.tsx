@@ -22,7 +22,7 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
 
     const {
       clearEngineError,
-      documentGeneration,
+      viewGeneration,
       engineError,
       handle,
       receive,
@@ -52,9 +52,9 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
         } catch {
           return
         }
-        receive(msg, documentGeneration)
+        receive(msg, viewGeneration)
       },
-      [documentGeneration, receive]
+      [viewGeneration, receive]
     )
 
     const handleReload = useCallback(() => {
@@ -74,7 +74,7 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
         {/* Why: a new view per document, not reload(): a reloading view still delivers its old
             document's messages, and only a view's own onMessage can say which document sent one. */}
         <WebView
-          key={documentGeneration}
+          key={viewGeneration}
           ref={webViewRef}
           source={source}
           style={TERMINAL_WEBVIEW_FRAME_STYLES.webview}

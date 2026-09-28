@@ -4,6 +4,7 @@
  * The document builds its terminal before it reports ready, puts that box in `web-ready`, and
  * reports it again whenever xterm lays out a different one.
  */
+import { fitDimensionsFromCell } from './terminal-grid-fit'
 
 export type TerminalCellMetrics = { fontScale: number; cellWidth: number; cellHeight: number }
 
@@ -42,6 +43,13 @@ export function createTerminalCellBoxStore() {
   return {
     get(fontScale: number): TerminalCellMetrics | undefined {
       return cells.get(fontScale)
+    },
+    /** The grid a laid-out frame holds at this text size; null until a box is known. */
+    fit(fontScale: number, frame: { width: number; height: number }) {
+      const cell = cells.get(fontScale)
+      return cell && frame.width > 0 && frame.height > 0
+        ? fitDimensionsFromCell(cell, frame.width, frame.height)
+        : null
     },
     /** Returns true when this replaced a different box for the same text size. */
     record(entry: TerminalCellMetrics): boolean {

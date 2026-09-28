@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import type { TerminalOscLinkRange } from '../../../src/shared/terminal-osc-link-ranges'
 import { readTerminalCellMetrics, terminalCellBoxes } from './terminal-cell-metrics'
-import { useTerminalDocumentGeneration } from './terminal-document-generation'
+import { useTerminalViewGeneration } from './terminal-view-generation'
 import { createDocumentInitTracker } from './terminal-document-init-tracker'
-import { fitDimensionsFromCell } from './terminal-grid-fit'
 import type { TerminalWebViewHandle, TerminalWebViewProps } from './terminal-webview-contract'
 import { useTerminalWebViewEngineErrorState } from './terminal-webview-engine-error-state'
 import { useTerminalWebReadyWatchdog } from './terminal-webview-ready-watchdog'
@@ -144,8 +143,8 @@ export function useTerminalWebViewController(
     writeCoalescer.clear()
     armWebReadyWatchdog()
   }, [armWebReadyWatchdog, pendingMessages, writeCoalescer])
-  const { documentGeneration, handleLoadStart, isCurrentDocument, replaceDocument } =
-    useTerminalDocumentGeneration(resetReadiness, armWebReadyWatchdog)
+  const { viewGeneration, handleLoadStart, isCurrentView, replaceDocument } =
+    useTerminalViewGeneration(resetReadiness, armWebReadyWatchdog)
 
   const confirmWebReady = useCallback(
     (notifyParent: boolean) => {
@@ -176,7 +175,7 @@ export function useTerminalWebViewController(
   /** One notify, already parsed, from the document the view built for `generation`. */
   const receive = useCallback(
     (msg: Record<string, unknown>, generation: number) => {
-      if (!isCurrentDocument(generation)) {
+      if (!isCurrentView(generation)) {
         return
       }
       routeTerminalQueryReply(msg, onTerminalQueryReply)
@@ -231,7 +230,7 @@ export function useTerminalWebViewController(
     },
     [
       confirmWebReady,
-      isCurrentDocument,
+      isCurrentView,
       promises,
       reportEngineError,
       onSelectionMode,
@@ -260,6 +259,11 @@ export function useTerminalWebViewController(
   useEffect(() => {
     postMessage({ type: 'set-font-scale', fontScale: textScale })
   }, [postMessage, textScale])
+
+  const fitDimensions = useCallback(
+    (frame: { width: number; height: number }) => terminalCellBoxes.fit(textScale, frame),
+    [textScale]
+  )
 
   const handle = useMemo<TerminalWebViewHandle>(
     () => ({
@@ -313,12 +317,9 @@ export function useTerminalWebViewController(
         writeCoalescer.clear()
         postMessage({ type: 'clear' })
       },
-      fitDimensions(frame: { width: number; height: number }) {
-        const cell = terminalCellBoxes.get(textScale)
-        const fit =
-          cell && frame.width > 0 && frame.height > 0
-            ? fitDimensionsFromCell(cell, frame.width, frame.height)
-            : null
+      fitDimensions,
+      seedFitDimensions(frame: { width: number; height: number }) {
+        const fit = fitDimensions(frame)
         if (fit) {
           lastGridRef.current = `${fit.cols}x${fit.rows}`
         }
@@ -346,6 +347,7 @@ export function useTerminalWebViewController(
     }),
     [
       armWebReadyWatchdog,
+      fitDimensions,
       pingsOnForegroundRecovery,
       postMessage,
       promises,
@@ -360,7 +362,7 @@ export function useTerminalWebViewController(
     armWebReadyWatchdog,
     clearEngineError,
     confirmWebReady,
-    documentGeneration,
+    viewGeneration,
     engineError,
     handle,
     receive,

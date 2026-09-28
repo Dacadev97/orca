@@ -1,21 +1,18 @@
 import { useCallback, useRef, useState } from 'react'
 
 /**
- * Which document the view holds now. A replaced document can still post its ready, so the view
- * tags every notify with the generation it was built for and drops any not from the current one.
+ * Which view holds the current document. A replaced document can still post, so each view tags its
+ * notifies with the generation it was built for and any not from the current one are dropped.
  */
-export function useTerminalDocumentGeneration(
+export function useTerminalViewGeneration(
   resetReadiness: () => void,
   armWebReadyWatchdog: () => void
 ) {
-  const [documentGeneration, setDocumentGeneration] = useState(0)
+  const [viewGeneration, setViewGeneration] = useState(0)
   const currentRef = useRef(0)
   const documentLoadedRef = useRef(false)
 
-  const isCurrentDocument = useCallback(
-    (generation: number) => generation === currentRef.current,
-    []
-  )
+  const isCurrentView = useCallback((generation: number) => generation === currentRef.current, [])
 
   /** The WebView starts loading a document; only a reload replaces one that commands were queued for. */
   const handleLoadStart = useCallback(() => {
@@ -28,13 +25,12 @@ export function useTerminalDocumentGeneration(
     resetReadiness()
   }, [armWebReadyWatchdog, resetReadiness])
 
-  /** Drops the document for a new one, which the view builds as `documentGeneration`. */
+  /** Drops the document for a new one, which the view builds as `viewGeneration`. */
   const replaceDocument = useCallback(() => {
     resetReadiness()
-    documentLoadedRef.current = false
     currentRef.current += 1
-    setDocumentGeneration(currentRef.current)
+    setViewGeneration(currentRef.current)
   }, [resetReadiness])
 
-  return { documentGeneration, handleLoadStart, isCurrentDocument, replaceDocument }
+  return { viewGeneration, handleLoadStart, isCurrentView, replaceDocument }
 }

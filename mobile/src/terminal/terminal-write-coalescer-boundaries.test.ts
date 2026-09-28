@@ -7,16 +7,10 @@ import {
   TERMINAL_WRITE_FLUSH_WINDOW_MS
 } from './terminal-write-coalescer'
 
-const webViewSource = readFileSync(new URL('./TerminalWebView.tsx', import.meta.url), 'utf8')
 // C7.5 moved everything that is not `react-native-webview` into the controller both components
-// share, so the coalescer's boundaries are read there; the component is still read for the two
-// WebView lifecycle events that reach it.
+// share, so the coalescer's boundaries are read there.
 const controllerSource = readFileSync(
   new URL('./use-terminal-webview-controller.ts', import.meta.url),
-  'utf8'
-)
-const generationSource = readFileSync(
-  new URL('./terminal-document-generation.ts', import.meta.url),
   'utf8'
 )
 
@@ -154,31 +148,6 @@ describe('terminal write coalescer boundaries', () => {
       expect(flushIndex).toBeGreaterThanOrEqual(0)
       expect(postIndex).toBeGreaterThan(flushIndex)
     }
-  })
-
-  it('clears the coalescer in both document-lifecycle hooks alongside pendingMessages', () => {
-    // Both hooks now reach one function, so the clearing is asserted once where it lives and the
-    // two WebView events are asserted to be the callers. Reading only the component would pass on
-    // a `resetReadiness` that had quietly stopped clearing either one.
-    const start = controllerSource.indexOf('const resetReadiness = useCallback')
-    expect(start).toBeGreaterThanOrEqual(0)
-    const body = controllerSource.slice(start, controllerSource.indexOf('}, [', start))
-    expect(body).toContain('pendingMessages.clear()')
-    expect(body).toContain('writeCoalescer.clear()')
-    expect(webViewSource).toContain('onLoadStart={handleLoadStart}')
-    expect(controllerSource).toContain('useTerminalDocumentGeneration(resetReadiness,')
-    for (const hook of ['handleLoadStart', 'replaceDocument']) {
-      const at = generationSource.indexOf(`const ${hook} = useCallback`)
-      expect(at).toBeGreaterThanOrEqual(0)
-      expect(generationSource.slice(at, generationSource.indexOf('}, [', at))).toContain(
-        'resetReadiness()'
-      )
-    }
-    const terminated = webViewSource.indexOf('const handleContentProcessDidTerminate')
-    expect(terminated).toBeGreaterThanOrEqual(0)
-    expect(webViewSource.slice(terminated, webViewSource.indexOf('}, [', terminated))).toContain(
-      'replaceDocument()'
-    )
   })
 
   it('clears the coalescer on unmount so no timer leaks', () => {

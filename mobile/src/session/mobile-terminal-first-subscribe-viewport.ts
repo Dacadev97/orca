@@ -3,7 +3,7 @@ import type { MutableRef, TerminalViewportDims } from './mobile-terminal-viewpor
 
 export type TerminalViewportSeedArgs = {
   handle: string
-  ref: Pick<TerminalWebViewHandle, 'fitDimensions'> | undefined
+  ref: Pick<TerminalWebViewHandle, 'seedFitDimensions'> | undefined
   viewportRef: MutableRef<TerminalViewportDims | null>
   viewportMeasuredRef: MutableRef<boolean>
   terminalFrameWidthRef: MutableRef<number>
@@ -25,7 +25,7 @@ export function seedTerminalViewportFromCellMetrics(args: TerminalViewportSeedAr
     return
   }
   const frameHeight = args.terminalFrameHeightRef.current
-  const dims = args.ref.fitDimensions({
+  const dims = args.ref.seedFitDimensions({
     width: args.terminalFrameWidthRef.current,
     height: frameHeight
   })

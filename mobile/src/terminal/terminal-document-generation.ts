@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 
 /**
  * Which document the view holds now. A replaced document can still post its ready, so the view
- * tags every notify with the generation it was built for and only the current one may flush.
+ * tags every notify with the generation it was built for and drops any not from the current one.
  */
 export function useTerminalDocumentGeneration(
   resetReadiness: () => void,

@@ -233,6 +233,18 @@ describe('the cell box xterm laid out', () => {
     expect(onWebReady).toHaveBeenCalledTimes(1)
   })
 
+  it('drops every notify from a document a reload replaced, not only its ready', () => {
+    const { handle, notify, onCellBoxChange, webView } = mount()
+    act(() => webView().props.onLoadStart())
+    notify({ type: 'web-ready', cellMetrics: [cellAt(scale)] })
+    notify(cellMetrics(23 / 3, 55))
+    const oldDocument = webView().props.onMessage
+    act(() => webView().props.onContentProcessDidTerminate({ nativeEvent: {} }))
+    act(() => oldDocument({ nativeEvent: { data: JSON.stringify(cellMetrics(7.8, 55)) } }))
+    expect(onCellBoxChange).not.toHaveBeenCalled()
+    expect(handle().fitDimensions(FRAME)).toEqual({ cols: 55, rows: 47 })
+  })
+
   it('tells the document the app text scale before it builds its terminal', () => {
     const { webView } = mount(1.25)
     const html: string = webView().props.source.html

@@ -176,7 +176,7 @@ export function useTerminalWebViewController(
   /** One notify, already parsed, from the document the view built for `generation`. */
   const receive = useCallback(
     (msg: Record<string, unknown>, generation: number) => {
-      if (msg.type === 'web-ready' && !isCurrentDocument(generation)) {
+      if (!isCurrentDocument(generation)) {
         return
       }
       routeTerminalQueryReply(msg, onTerminalQueryReply)

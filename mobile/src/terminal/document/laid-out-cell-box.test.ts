@@ -170,10 +170,18 @@ describe('a started document', () => {
   it('keeps the terminal built before ready out of sight until the first init has replayed', async () => {
     const { scope, posted, init } = started()
     try {
+      // Hidden, not removed from layout: the box is measured and reported while it is out of sight.
       expect(scope.surface?.style.visibility).toBe('hidden')
+      expect(scope.surface?.style.display).toBe('')
+      expect(posted[0]).toEqual({
+        type: 'web-ready',
+        cellMetrics: [{ fontScale: 1, cellWidth: 23 / 3, cellHeight: 15 }]
+      })
       init()
+      expect(scope.surface?.style.visibility).toBe('hidden')
       await untilReady(posted)
       expect(scope.surface?.style.visibility).toBe('')
+      expect(posted.filter((message) => message.type === 'cell-metrics')).toHaveLength(1)
     } finally {
       stopTerminalDocument(scope)
     }

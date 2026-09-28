@@ -25,6 +25,7 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
       viewGeneration,
       engineError,
       handle,
+      isCurrentView,
       receive,
       reportNativeEngineError,
       replaceDocument,
@@ -57,9 +58,15 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
       [viewGeneration, receive]
     )
 
-    const handleViewLoadStart = useCallback(
-      () => handleLoadStart(viewGeneration),
-      [handleLoadStart, viewGeneration]
+    // Why: a replaced view keeps its last props; none of its events may act on the current document.
+    const fromThisView = useCallback(
+      <Event,>(handler: (event: Event) => void) =>
+        (event: Event) => {
+          if (isCurrentView(viewGeneration)) {
+            handler(event)
+          }
+        },
+      [isCurrentView, viewGeneration]
     )
 
     const handleReload = useCallback(() => {
@@ -93,14 +100,18 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
           // Why: Android WebView defaults textZoom to the system font scale, inflating
           // xterm's DOM glyphs past its canvas-measured cell grid (#4579). iOS ignores it.
           textZoom={100}
-          onLoadStart={handleViewLoadStart}
+          onLoadStart={fromThisView(handleLoadStart)}
           onMessage={handleMessage}
-          onError={(event) => reportNativeEngineError('Terminal WebView load failed', event)}
-          onHttpError={(event) => reportNativeEngineError('Terminal WebView HTTP error', event)}
-          onRenderProcessGone={(event) =>
+          onError={fromThisView((event) =>
+            reportNativeEngineError('Terminal WebView load failed', event)
+          )}
+          onHttpError={fromThisView((event) =>
+            reportNativeEngineError('Terminal WebView HTTP error', event)
+          )}
+          onRenderProcessGone={fromThisView((event) =>
             reportNativeEngineError('Terminal WebView render process ended', event)
-          }
-          onContentProcessDidTerminate={handleContentProcessDidTerminate}
+          )}
+          onContentProcessDidTerminate={fromThisView(handleContentProcessDidTerminate)}
         />
         {engineError ? (
           <TerminalWebViewEngineErrorOverlay message={engineError} onReload={handleReload} />

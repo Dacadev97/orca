@@ -19,21 +19,14 @@ export function useTerminalViewGeneration(
    * stored cell box queues init before it. Every later one, a replacement view's first included,
    * drops the queue and waits for a new ready; the hasInit resubscribe restores the init.
    */
-  const handleLoadStart = useCallback(
-    (generation: number) => {
-      // Why: a replaced view's late load start must not reset the current document.
-      if (!isCurrentView(generation)) {
-        return
-      }
-      if (!documentLoadedRef.current) {
-        documentLoadedRef.current = true
-        armWebReadyWatchdog()
-        return
-      }
-      resetReadiness()
-    },
-    [armWebReadyWatchdog, isCurrentView, resetReadiness]
-  )
+  const handleLoadStart = useCallback(() => {
+    if (!documentLoadedRef.current) {
+      documentLoadedRef.current = true
+      armWebReadyWatchdog()
+      return
+    }
+    resetReadiness()
+  }, [armWebReadyWatchdog, resetReadiness])
 
   /** Drops the document for a new one, which the view builds as `viewGeneration`. */
   const replaceDocument = useCallback(() => {

@@ -310,6 +310,27 @@ describe('the cell box xterm laid out', () => {
     expect(postedTypes()).toEqual(['init'])
   })
 
+  it('ignores every lifecycle event from a view a replacement unmounted', () => {
+    const { handle, notify, webView } = mount()
+    act(() => webView().props.onLoadStart())
+    const oldView = webView().props
+    act(() => oldView.onContentProcessDidTerminate({ nativeEvent: {} }))
+    const currentView = webView()
+    act(() => currentView.props.onLoadStart())
+    notify({ type: 'web-ready', cellMetrics: [cellAt(scale)] })
+    act(() => {
+      oldView.onContentProcessDidTerminate({ nativeEvent: {} })
+      oldView.onRenderProcessGone({ nativeEvent: { didCrash: true } })
+      oldView.onError({ nativeEvent: { description: 'late' } })
+      oldView.onHttpError({ nativeEvent: { statusCode: 500 } })
+    })
+    expect(webView()).toBe(currentView)
+    expect(currentView.parent?.findAll((node) => node.props.onReload !== undefined)).toEqual([])
+    nativeWebViewMethods.postMessage.mockClear()
+    handle().init(55, 47, 'snapshot')
+    expect(postedTypes()).toEqual(['init'])
+  })
+
   it('tells the document the app text scale before it builds its terminal', () => {
     const { webView } = mount(1.25)
     const html: string = webView().props.source.html

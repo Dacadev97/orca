@@ -364,6 +364,7 @@ export function useTerminalWebViewController(
     viewGeneration,
     engineError,
     handle,
+    isCurrentView,
     receive,
     reportNativeEngineError,
     replaceDocument,

@@ -92,10 +92,13 @@ const HOST_COMPONENT_NAMES = new Set([
 // never pass it. Found by pullfrog on #22300.
 // Moved, count unchanged, when the Markdown actions' Back `useEffect` became `useBackClaim`, the
 // seam that also claims the key on the page while a draft is dirty.
-const HEAD_MAIN_HOOK_SHA256 = '62bd6fb134278b548ce3e6398c07296ba8f3ef10df568448b7cace4fe0b5d86e'
-const HEAD_HOOK_BINDING_SHA256 = '55e05438d56dad377072f4f58321a396bc805371960234776f7b2a393ec6995d'
+// +3 hooks and +1 callback in the diff-note actions: the ref and state holding the notes a new agent
+// session is still being started with, and `sendDiffNotesToNewAgent`, which holds them until the
+// launch's reply so a second send can't start another agent with them.
+const HEAD_MAIN_HOOK_SHA256 = 'dfeaada3c65becafba8540ac61a7dd83227685a73629aa807e5c1a77089a5d5c'
+const HEAD_HOOK_BINDING_SHA256 = 'bb29c0237432a095b29fb822c1d8e1c8fc0a6796e9619842db8e5fab6bd4165e'
 const HEAD_CALLBACK_IDENTITY_SHA256 =
-  '373dca17a060e63d8cb4e32416ca2889b8404cee78f7b47e632940a9980baf23'
+  '05c0fd9ec69e0a6cc18c46bf3dc324a9715dba3adc532eb6188be6c2ad5ca93e'
 // Pins that no callback body in the route changed unnoticed. Body text, not behaviour: the sends
 // and repo reads inside them now name their `RpcOperation` instead of the raw `sendRequest` port.
 // Refreshed in step 6 for the gesture flush, whose `terminal.send` became `terminalInputSend` and
@@ -116,8 +119,9 @@ const HEAD_CALLBACK_IDENTITY_SHA256 =
 // Refreshed once more for the two dictation failure handlers, which now both call
 // `reportDictationFailure` instead of each choosing between the setup sheet and a toast.
 // Refreshed when `applySessionTabs` began recording a landed launch's tab on the host, and when it
-// began freeing the "+" lock as that tab lands.
-const HEAD_CALLBACK_BODY_SHA256 = '1d933557b3b00a77c9409327a1f8b6e649ee27f031b2f6895f2e12f0db601571'
+// began freeing the "+" lock as that tab lands. Refreshed when "Send review notes to AI" stopped
+// offering notes a new agent session is still being started with.
+const HEAD_CALLBACK_BODY_SHA256 = '9455fffce20fd34a0f526885a218f52851792a0d6ea655c96e7b5b389fb6f12b'
 // Refreshed for the startup effect: both `worktree.activate` sends became `worktreeActivate`, and
 // the sleeping-agent check reads that operation's verdict instead of the reply envelope. Refreshed
 // again when the reporter took the reply and interpreted it itself, retiring the hand-built
@@ -188,7 +192,8 @@ const HEAD_RUNTIME_STRING_SHA256 =
   'b0af3c70d206e337bda90db908fc9cc769eb2cc39f628906c7d42e9c73d4b4af'
 // Moved by both of the dock's fields: their refs, and the live one's submit handler, are the seam's now.
 const HEAD_HOST_JSX_SHA256 = 'ca4c8b46af86a05cb671de91c22111c9e4aaeefd4a04c7b8b09976ca01a31c9b'
-const HEAD_LEAF_JSX_SHA256 = 'c7e1a4b90197697f1eaa640c38da63281b4f7b84fb036ae2152f00c2f7d7cb77'
+// Moved when the diff view's note actions began carrying the notes still being sent.
+const HEAD_LEAF_JSX_SHA256 = '0eef3250e3993e7c583819fd6137ec29c89f062d684a70c51b8b01e99188ba22'
 const HEAD_STYLE_REFERENCE_SHA256 =
   '295a3501c2c6d7bea7c8bbf38b3f3534f01344cd7e1b91bb8e07c040821d596a'
 // +1 for that activation's identity payload.
@@ -580,10 +585,10 @@ describe('mobile session route extraction parity', () => {
     const contentBindings = CONTENT_COMPONENT_NAMES.flatMap(
       (name) => readHookFacts(name, definitions).bindings
     )
-    expect(main.hooks).toHaveLength(281)
+    expect(main.hooks).toHaveLength(284)
     expect(hash(main.hooks)).toBe(HEAD_MAIN_HOOK_SHA256)
     expect(hash(main.bindings)).toBe(HEAD_HOOK_BINDING_SHA256)
-    expect(main.callbacks).toHaveLength(79)
+    expect(main.callbacks).toHaveLength(80)
     expect(hash(main.callbacks)).toBe(HEAD_CALLBACK_IDENTITY_SHA256)
     expect(hash(main.callbackBodies)).toBe(HEAD_CALLBACK_BODY_SHA256)
     expect(main.effects).toHaveLength(24)

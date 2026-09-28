@@ -65,11 +65,10 @@ describe('TerminalWebView text zoom', () => {
     const end = terminalWebViewSource.indexOf('/>', start)
     expect(end).toBeGreaterThan(start)
     const webViewProps = terminalWebViewSource.slice(start, end)
-    expect(terminalHtmlModuleSource).toContain(
-      'export const XTERM_WEBVIEW_SOURCE = { html: XTERM_HTML }'
-    )
-    expect(webViewProps).toContain('source={XTERM_WEBVIEW_SOURCE}')
-    expect(webViewProps).not.toContain('source={{ html: XTERM_HTML }}')
+    // One source object per view, and one per start pair across views.
+    expect(terminalWebViewSource).toContain('const [source] = useState(() =>')
+    expect(webViewProps).toContain('source={source}')
+    expect(terminalHtmlModuleSource).toContain('webViewSources.set(key, source)')
   })
 
   it('forces the Claude status dot to text presentation before xterm writes', () => {

@@ -33,7 +33,9 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
     // and `documentRef` is null. That flush is the one caller that reaches `post` before the mount
     // has a handle, and this is what catches it: held here, replayed the moment there is one.
     const beforeMountRef = useRef<(TerminalWebViewCommand & { id: number })[]>([])
-    const receiveRef = useRef<((message: Record<string, unknown>) => void) | null>(null)
+    const receiveRef = useRef<
+      ((message: Record<string, unknown>, generation: number) => void) | null
+    >(null)
 
     const post = useCallback((command: TerminalWebViewCommand & { id: number }) => {
       const mounted = documentRef.current
@@ -50,16 +52,14 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
       // were gone so was the component holding this handle.
       pingsOnForegroundRecovery: () => false
     })
-    const { clearEngineError, engineError, handle, receive, resetReadiness } = controller
+    const { clearEngineError, documentGeneration, engineError, handle, receive, replaceDocument } =
+      controller
     // Why: every document this view builds starts as the view mounted — its scale, and whether it
     // was shown — as the native WebView's pre-content script does; later scales arrive with init.
     const [atMount] = useState(() => ({
       textScale: props.textScale ?? 1,
       shown: props.shownAtMount ?? true
     }))
-    // The page's answer to the WebView's reload: drop the document and build another one. The host
-    // element is keyed on it so React replaces the div rather than handing back one xterm left in.
-    const [generation, setGeneration] = useState(0)
 
     useImperativeHandle(ref, () => handle, [handle])
     // In an effect, not during render: React may replay or discard render work, and the document
@@ -76,19 +76,26 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
       }
       let live
       try {
-        live = mountTerminalWebDocument(host, (message) => receiveRef.current?.(message), atMount)
+        live = mountTerminalWebDocument(
+          host,
+          (message) => receiveRef.current?.(message, documentGeneration),
+          atMount
+        )
       } catch (error) {
         // A start that throws is the document's own failure and the factory has already unwound
         // it, so there is no handle and no engine ran: no `error` notify is coming. It goes down
         // the document's own reporting path, which names the cause in the overlay instead of
         // leaving the readiness watchdog to say "no ready after 15s".
-        receiveRef.current?.({
-          type: 'error',
-          fatal: true,
-          message: `terminal document failed to start - ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        })
+        receiveRef.current?.(
+          {
+            type: 'error',
+            fatal: true,
+            message: `terminal document failed to start - ${
+              error instanceof Error ? error.message : String(error)
+            }`
+          },
+          documentGeneration
+        )
         return
       }
       documentRef.current = live
@@ -106,18 +113,24 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
       }
       // Mounted once per generation: re-running this would throw away a live terminal and its
       // scrollback, and the controller's identity changes with every callback prop.
-    }, [generation])
+    }, [atMount, documentGeneration])
 
+    // The page's answer to the WebView's reload: drop the document and build another one. The host
+    // element is keyed on the generation so React replaces the div rather than handing back one
+    // xterm left in.
     const handleReload = useCallback(() => {
       clearEngineError()
-      resetReadiness()
       beforeMountRef.current = []
-      setGeneration((previous) => previous + 1)
-    }, [clearEngineError, resetReadiness])
+      replaceDocument()
+    }, [clearEngineError, replaceDocument])
 
     return (
       <View style={[TERMINAL_WEBVIEW_FRAME_STYLES.container, props.style]}>
-        <View key={generation} ref={hostRef} style={TERMINAL_WEBVIEW_FRAME_STYLES.webview} />
+        <View
+          key={documentGeneration}
+          ref={hostRef}
+          style={TERMINAL_WEBVIEW_FRAME_STYLES.webview}
+        />
         {engineError ? (
           <TerminalWebViewEngineErrorOverlay message={engineError} onReload={handleReload} />
         ) : null}

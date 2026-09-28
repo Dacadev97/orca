@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import type { TerminalOscLinkRange } from '../../../src/shared/terminal-osc-link-ranges'
 import { readTerminalCellMetrics, terminalCellBoxes } from './terminal-cell-metrics'
+import { useTerminalDocumentGeneration } from './terminal-document-generation'
 import { createDocumentInitTracker } from './terminal-document-init-tracker'
 import { fitDimensionsFromCell } from './terminal-grid-fit'
 import type { TerminalWebViewHandle, TerminalWebViewProps } from './terminal-webview-contract'
@@ -130,6 +131,22 @@ export function useTerminalWebViewController(
     }
   }, [writeCoalescer])
 
+  /**
+   * The document is gone or about to be replaced: nothing queued belongs to the next one.
+   *
+   * Why: messages queued for a previous generation are stale after a reload; dropping them avoids
+   * replaying terminal chunks before the next init snapshot.
+   */
+  const resetReadiness = useCallback(() => {
+    isWebReadyRef.current = false
+    pendingPingIdRef.current = null
+    pendingMessages.clear()
+    writeCoalescer.clear()
+    armWebReadyWatchdog()
+  }, [armWebReadyWatchdog, pendingMessages, writeCoalescer])
+  const { documentGeneration, handleLoadStart, isCurrentDocument, replaceDocument } =
+    useTerminalDocumentGeneration(resetReadiness, armWebReadyWatchdog)
+
   const confirmWebReady = useCallback(
     (notifyParent: boolean) => {
       pendingPingIdRef.current = null
@@ -156,9 +173,12 @@ export function useTerminalWebViewController(
     ]
   )
 
-  /** One notify from the document, already parsed. */
+  /** One notify, already parsed, from the document the view built for `generation`. */
   const receive = useCallback(
-    (msg: Record<string, unknown>) => {
+    (msg: Record<string, unknown>, generation: number) => {
+      if (msg.type === 'web-ready' && !isCurrentDocument(generation)) {
+        return
+      }
       routeTerminalQueryReply(msg, onTerminalQueryReply)
 
       if (msg.type === 'web-ready') {
@@ -211,6 +231,7 @@ export function useTerminalWebViewController(
     },
     [
       confirmWebReady,
+      isCurrentDocument,
       promises,
       reportEngineError,
       onSelectionMode,
@@ -229,32 +250,6 @@ export function useTerminalWebViewController(
       textScale
     ]
   )
-
-  /**
-   * The document is gone or about to be replaced: nothing queued belongs to the next one.
-   *
-   * Why: messages queued for a previous generation are stale after a reload; dropping them avoids
-   * replaying terminal chunks before the next init snapshot.
-   */
-  const resetReadiness = useCallback(() => {
-    isWebReadyRef.current = false
-    pendingPingIdRef.current = null
-    pendingMessages.clear()
-    writeCoalescer.clear()
-    armWebReadyWatchdog()
-  }, [armWebReadyWatchdog, pendingMessages, writeCoalescer])
-
-  const documentLoadedRef = useRef(false)
-  /** The WebView starts loading a document; only a reload replaces one that commands were queued for. */
-  const handleLoadStart = useCallback(() => {
-    // Why: a subscribe sized from the stored cell box queues init before the first load starts.
-    if (!documentLoadedRef.current) {
-      documentLoadedRef.current = true
-      armWebReadyWatchdog()
-      return
-    }
-    resetReadiness()
-  }, [armWebReadyWatchdog, resetReadiness])
 
   useEffect(() => {
     postMessage({ type: 'set-theme', terminalTheme })
@@ -365,11 +360,12 @@ export function useTerminalWebViewController(
     armWebReadyWatchdog,
     clearEngineError,
     confirmWebReady,
+    documentGeneration,
     engineError,
     handle,
     receive,
     reportNativeEngineError,
-    resetReadiness,
+    replaceDocument,
     handleLoadStart
   }
 }

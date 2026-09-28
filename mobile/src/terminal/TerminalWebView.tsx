@@ -22,11 +22,12 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
 
     const {
       clearEngineError,
+      documentGeneration,
       engineError,
       handle,
       receive,
       reportNativeEngineError,
-      resetReadiness,
+      replaceDocument,
       handleLoadStart
     } = useTerminalWebViewController(props, {
       post,
@@ -51,27 +52,29 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
         } catch {
           return
         }
-        receive(msg)
+        receive(msg, documentGeneration)
       },
-      [receive]
+      [documentGeneration, receive]
     )
 
     const handleReload = useCallback(() => {
       clearEngineError()
-      webViewRef.current?.reload()
-    }, [clearEngineError])
+      replaceDocument()
+    }, [clearEngineError, replaceDocument])
 
     const handleContentProcessDidTerminate = useCallback(() => {
       // Why: WKWebView content-process loss is recoverable; stale commands belong
       // to the dead document and the replacement must prove readiness before replay.
-      resetReadiness()
+      replaceDocument()
       clearEngineError()
-      webViewRef.current?.reload()
-    }, [clearEngineError, resetReadiness])
+    }, [clearEngineError, replaceDocument])
 
     return (
       <View style={[TERMINAL_WEBVIEW_FRAME_STYLES.container, props.style]}>
+        {/* Why: a new view per document, not reload(): a reloading view still delivers its old
+            document's messages, and only a view's own onMessage can say which document sent one. */}
         <WebView
+          key={documentGeneration}
           ref={webViewRef}
           source={source}
           style={TERMINAL_WEBVIEW_FRAME_STYLES.webview}

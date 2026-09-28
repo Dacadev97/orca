@@ -210,6 +210,29 @@ describe('the cell box xterm laid out', () => {
     expect(onWebReady).toHaveBeenLastCalledWith({ hasInit: false })
   })
 
+  it('lets only the current document take a ready: one a reload replaced delivers nothing', () => {
+    const { handle, onWebReady, webView } = mount()
+    // The session's resubscribe: a document without the init is sent one.
+    onWebReady.mockImplementation(({ hasInit }) => {
+      if (!hasInit) {
+        handle().init(55, 47, 'snapshot')
+      }
+    })
+    act(() => webView().props.onLoadStart())
+    handle().init(55, 47, 'snapshot')
+    const oldDocument = webView().props.onMessage
+    act(() => webView().props.onContentProcessDidTerminate({ nativeEvent: {} }))
+    act(() => webView().props.onLoadStart())
+    nativeWebViewMethods.postMessage.mockClear()
+    const ready = { nativeEvent: { data: JSON.stringify({ type: 'web-ready' }) } }
+    act(() => oldDocument(ready))
+    expect(postedTypes()).toEqual([])
+    expect(onWebReady).not.toHaveBeenCalled()
+    act(() => webView().props.onMessage(ready))
+    expect(postedTypes().filter((type) => type === 'init')).toHaveLength(1)
+    expect(onWebReady).toHaveBeenCalledTimes(1)
+  })
+
   it('tells the document the app text scale before it builds its terminal', () => {
     const { webView } = mount(1.25)
     const html: string = webView().props.source.html

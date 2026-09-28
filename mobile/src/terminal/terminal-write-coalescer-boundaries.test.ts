@@ -15,6 +15,10 @@ const controllerSource = readFileSync(
   new URL('./use-terminal-webview-controller.ts', import.meta.url),
   'utf8'
 )
+const generationSource = readFileSync(
+  new URL('./terminal-document-generation.ts', import.meta.url),
+  'utf8'
+)
 
 // Simulates TerminalWebView's postMessage: ready → deliver, not ready → queue.
 // There is no React render harness in the node environment, so the boundary
@@ -162,14 +166,18 @@ describe('terminal write coalescer boundaries', () => {
     expect(body).toContain('pendingMessages.clear()')
     expect(body).toContain('writeCoalescer.clear()')
     expect(webViewSource).toContain('onLoadStart={handleLoadStart}')
-    const loadStart = controllerSource.indexOf('const handleLoadStart = useCallback')
-    expect(
-      controllerSource.slice(loadStart, controllerSource.indexOf('}, [', loadStart))
-    ).toContain('resetReadiness()')
+    expect(controllerSource).toContain('useTerminalDocumentGeneration(resetReadiness,')
+    for (const hook of ['handleLoadStart', 'replaceDocument']) {
+      const at = generationSource.indexOf(`const ${hook} = useCallback`)
+      expect(at).toBeGreaterThanOrEqual(0)
+      expect(generationSource.slice(at, generationSource.indexOf('}, [', at))).toContain(
+        'resetReadiness()'
+      )
+    }
     const terminated = webViewSource.indexOf('const handleContentProcessDidTerminate')
     expect(terminated).toBeGreaterThanOrEqual(0)
     expect(webViewSource.slice(terminated, webViewSource.indexOf('}, [', terminated))).toContain(
-      'resetReadiness()'
+      'replaceDocument()'
     )
   })
 

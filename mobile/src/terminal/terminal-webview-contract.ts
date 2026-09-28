@@ -71,6 +71,8 @@ export type TerminalWebViewProps = {
   // Why: baseline zoom multiplier applied on top of fit-to-width scale; raw
   // xterm fontSize alone cannot drive apparent size because fitting cancels it.
   textScale?: number
+  // Why: only a view shown when it mounts builds its terminal before ready (one WebGL context each).
+  shownAtMount?: boolean
   /** `hasInit`: this document holds the latest init the terminal was given (none given: false). */
   onWebReady?: (document: { hasInit: boolean }) => void
   onEngineError?: (message: string) => void

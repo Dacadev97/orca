@@ -48,7 +48,9 @@ export function startMessageBridge(scope: TerminalDocumentScope) {
   )
   if (scope.hasEngine()) {
     // Why: ready carries the cell box xterm itself laid out, so the host sizes the first subscribe.
-    prepareTerminal(scope)
+    if (scope.buildsTerminalBeforeReady()) {
+      prepareTerminal(scope)
+    }
     notify(scope, { type: 'web-ready', cellMetrics: laidOutCellMetrics(scope) })
   } else {
     reportEngineError(scope, 'terminal engine missing', 'xterm failed to load', true)

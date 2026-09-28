@@ -37,8 +37,10 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
     useImperativeHandle(ref, () => handle, [handle])
     // Why: the document builds its terminal before ready, so it needs the text scale before any
     // message can reach it; later changes arrive as set-font-scale.
-    const [initialTextScaleScript] = useState(
-      () => `window.__orcaTerminalTextScale = ${JSON.stringify(props.textScale ?? 1)}; true;`
+    const [atMountScript] = useState(
+      () =>
+        `window.__orcaTerminalTextScale = ${JSON.stringify(props.textScale ?? 1)}; ` +
+        `window.__orcaTerminalShown = ${JSON.stringify(props.shownAtMount ?? true)}; true;`
     )
 
     const handleMessage = useCallback(
@@ -72,7 +74,7 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
         <WebView
           ref={webViewRef}
           source={XTERM_WEBVIEW_SOURCE}
-          injectedJavaScriptBeforeContentLoaded={initialTextScaleScript}
+          injectedJavaScriptBeforeContentLoaded={atMountScript}
           style={TERMINAL_WEBVIEW_FRAME_STYLES.webview}
           originWhitelist={['*']}
           javaScriptEnabled

@@ -10,6 +10,7 @@ import {
   windowCapturedEngineErrors,
   windowHasEngine,
   windowInitialTextScale,
+  windowBuildsTerminalBeforeReady,
   observeWindowViewport,
   windowViewportRect,
   type TerminalDocumentHost,
@@ -357,6 +358,7 @@ function createTerminalDocumentHostSeams(): TerminalDocumentHostSeams {
     installHostTransport: installWindowHostTransport,
     hasEngine: windowHasEngine,
     initialTextScale: windowInitialTextScale,
+    buildsTerminalBeforeReady: windowBuildsTerminalBeforeReady,
     viewportRect: windowViewportRect,
     observeViewport: observeWindowViewport,
     root: null

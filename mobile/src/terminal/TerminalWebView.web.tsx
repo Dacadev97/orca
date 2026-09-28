@@ -51,9 +51,12 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
       pingsOnForegroundRecovery: () => false
     })
     const { clearEngineError, engineError, handle, receive, resetReadiness } = controller
-    // Why: every document this view builds starts at the scale it mounted with, as the native
-    // WebView's pre-content script does; later changes reach it as set-font-scale and init.
-    const [initialTextScale] = useState(() => props.textScale ?? 1)
+    // Why: every document this view builds starts as the view mounted — its scale, and whether it
+    // was shown — as the native WebView's pre-content script does; later scales arrive with init.
+    const [atMount] = useState(() => ({
+      textScale: props.textScale ?? 1,
+      shown: props.shownAtMount ?? true
+    }))
     // The page's answer to the WebView's reload: drop the document and build another one. The host
     // element is keyed on it so React replaces the div rather than handing back one xterm left in.
     const [generation, setGeneration] = useState(0)
@@ -73,11 +76,7 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(
       }
       let live
       try {
-        live = mountTerminalWebDocument(
-          host,
-          (message) => receiveRef.current?.(message),
-          initialTextScale
-        )
+        live = mountTerminalWebDocument(host, (message) => receiveRef.current?.(message), atMount)
       } catch (error) {
         // A start that throws is the document's own failure and the factory has already unwound
         // it, so there is no handle and no engine ran: no `error` notify is coming. It goes down

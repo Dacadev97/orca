@@ -20,6 +20,8 @@ import { TERMINAL_DOCUMENT_MARKUP } from './terminal-webview-html'
 let startThrows: Error | null = null
 /** The text scale each document the factory built was started at, in order. */
 const startedScales: number[] = []
+/** Whether each of those documents was told to build its terminal before ready. */
+const startedBuilds: boolean[] = []
 
 vi.mock('./document/create-terminal-document', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./document/create-terminal-document')>()
@@ -27,6 +29,7 @@ vi.mock('./document/create-terminal-document', async (importOriginal) => {
     ...actual,
     createTerminalDocument: (host: Parameters<typeof actual.createTerminalDocument>[0]) => {
       startedScales.push(host?.initialTextScale?.() ?? 1)
+      startedBuilds.push(host?.buildsTerminalBeforeReady?.() ?? true)
       if (startThrows) {
         throw startThrows
       }
@@ -68,6 +71,7 @@ let renderer: ReactTestRenderer | null = null
 beforeEach(() => {
   startThrows = null
   startedScales.length = 0
+  startedBuilds.length = 0
   document.body.innerHTML = ''
   document.head.innerHTML = ''
 })
@@ -264,5 +268,15 @@ describe('the text scale a document is built at', () => {
       renderer?.root.find((node) => node.props.accessibilityRole === 'button').props.onPress()
     })
     expect(startedScales).toEqual([1.25, 1.25])
+  })
+
+  it('builds nothing before ready on the page for a view hidden when it mounted', () => {
+    const host = plantHost()
+    act(() => {
+      renderer = create(createElement(TerminalWebView, { shownAtMount: false }), {
+        createNodeMock: () => host
+      })
+    })
+    expect(startedBuilds).toEqual([false])
   })
 })

@@ -142,6 +142,16 @@ describe('a started document', () => {
     }
   })
 
+  it('builds nothing before ready for a view hidden when it mounted, and reports no box', () => {
+    const { scope, posted, built } = started({ buildsTerminalBeforeReady: () => false })
+    try {
+      expect(built).toHaveLength(0)
+      expect(posted[0]).toEqual({ type: 'web-ready', cellMetrics: [] })
+    } finally {
+      stopTerminalDocument(scope)
+    }
+  })
+
   it('reuses that terminal for the first init, so an open builds one xterm', async () => {
     const { scope, posted, built, init } = started()
     try {

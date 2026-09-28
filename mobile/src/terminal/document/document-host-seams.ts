@@ -65,6 +65,11 @@ export type TerminalDocumentHostSeams = {
   hasEngine: () => boolean
   /** `text-scaling`: the app's text scale, so the terminal built before ready lays out at it. */
   initialTextScale: () => number
+  /**
+   * `message-bridge`: whether to build the terminal before ready. Only a document shown when its
+   * view mounted does; every terminal is a WebGL context, and a page or app holds about sixteen.
+   */
+  buildsTerminalBeforeReady: () => boolean
   /** Every fit, pan, scroll and overlay bound, and every client point mapped into the grid. */
   viewportRect: () => TerminalDocumentViewportRect
   /** `fit-scale`: calls back when that box changes size, handing back its removal. */
@@ -124,6 +129,7 @@ declare global {
     __engineErrors?: string[]
     /** The app's text scale, which the native component injects before the document script runs. */
     __orcaTerminalTextScale?: unknown
+    __orcaTerminalShown?: unknown
   }
   const Terminal: new (options: Record<string, unknown>) => TerminalDocumentTerminal
 }
@@ -220,6 +226,10 @@ export function windowHasEngine() {
 export function windowInitialTextScale() {
   const scale = window.__orcaTerminalTextScale
   return typeof scale === 'number' && scale > 0 ? scale : 1
+}
+
+export function windowBuildsTerminalBeforeReady() {
+  return window.__orcaTerminalShown !== false
 }
 
 /**

@@ -85,7 +85,14 @@ async function tryResolveViaKnownPaths(
   return null
 }
 
-// Run `command -v node` under the user's login shell, then verify the result
+function buildNodeLookupCommand(shellName?: string): string {
+  if (shellName === 'nu' || shellName === 'nushell') {
+    return 'which node | get path | first'
+  }
+  return 'command -v node'
+}
+
+// Run the login shell probe, then verify the result
 // meets the minimum version. Returns null on any failure (shell missing, no
 // node found, version too old, timeout) so callers fall through to the error.
 async function tryResolveViaLoginShell(
@@ -107,9 +114,10 @@ async function tryResolveViaLoginShell(
       return null
     }
 
+    const shellName = shell.split('/').at(-1)
     const nodePath = await execCommand(
       conn,
-      buildSshLoginShellCommand(shell, 'command -v node'),
+      buildSshLoginShellCommand(shell, buildNodeLookupCommand(shellName)),
       commandOptions({ wrapCommand: false, timeoutMs: LOGIN_SHELL_PROBE_TIMEOUT_MS }, options)
     )
     const candidate = nodePath.trim().split('\n')[0]
